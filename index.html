@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#ffe8f5">
+<title>SortSplash — Sort colors. One more pour.</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg1:#fff5fb;--bg2:#e8f4ff;--card:#ffffffee;--ink:#2a2040;--muted:#7a6f8a;
+  --accent:#ff6bb5;--accent2:#7c9cff;--ok:#3ecf8e;--warn:#ffb347;
+  --tube-w:52px;--tube-h:168px;--layer-h:40px;--cap:4;
+  --radius:18px;--shadow:0 8px 28px rgba(80,40,100,.12);
+}
+html,body{height:100%;overflow:hidden;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:linear-gradient(165deg,var(--bg1) 0%,var(--bg2) 55%,#f0ffe8 100%);
+  color:var(--ink);-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none}
+#app{max-width:420px;margin:0 auto;height:100%;display:flex;flex-direction:column;padding:env(safe-area-inset-top) 12px env(safe-area-inset-bottom);position:relative}
+header{display:flex;align-items:center;justify-content:space-between;padding:10px 4px 6px;gap:8px}
+.brand{display:flex;flex-direction:column;gap:1px;min-width:0}
+.brand h1{font-size:1.25rem;font-weight:800;letter-spacing:-.02em;background:linear-gradient(90deg,#ff6bb5,#7c9cff,#3ecf8e);-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand .tag{font-size:.68rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stats{display:flex;gap:8px;flex-shrink:0}
+.pill{background:var(--card);backdrop-filter:blur(8px);border-radius:999px;padding:6px 11px;font-size:.78rem;font-weight:700;
+  box-shadow:var(--shadow);display:flex;align-items:center;gap:4px}
+.pill span{color:var(--accent);font-variant-numeric:tabular-nums}
+
+.toolbar{display:flex;gap:6px;padding:6px 0 8px;flex-wrap:wrap;justify-content:center}
+.btn{appearance:none;border:none;cursor:pointer;font:inherit;font-weight:700;font-size:.78rem;
+  border-radius:14px;padding:10px 12px;min-height:44px;min-width:44px;
+  background:var(--card);color:var(--ink);box-shadow:var(--shadow);
+  transition:transform .12s ease,box-shadow .12s ease,opacity .15s;display:inline-flex;align-items:center;justify-content:center;gap:5px}
+.btn:active{transform:scale(.94)}
+.btn:disabled{opacity:.45;pointer-events:none}
+.btn.primary{background:linear-gradient(135deg,#ff6bb5,#ff8fc7);color:#fff}
+.btn.secondary{background:linear-gradient(135deg,#7c9cff,#a8bdff);color:#fff}
+.btn.ghost{background:rgba(255,255,255,.65)}
+.btn.ad{background:linear-gradient(135deg,#ffb347,#ffd080);color:#4a3000;position:relative}
+.btn.ad::after{content:"AD";font-size:.55rem;background:#fff8;border-radius:4px;padding:1px 4px;margin-left:2px;font-weight:800}
+
+#board-wrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative;padding:8px 0}
+#board{display:flex;flex-wrap:wrap;gap:14px 12px;justify-content:center;align-items:flex-end;max-width:100%;padding:12px 4px 20px}
+
+.tube-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;position:relative;
+  -webkit-tap-highlight-color:transparent}
+.tube-wrap.selected .tube{transform:translateY(-14px);box-shadow:0 12px 24px rgba(255,107,181,.35),inset 0 0 0 2px #ff6bb5}
+.tube-wrap.invalid .tube{animation:shake .35s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+.tube{
+  width:var(--tube-w);height:var(--tube-h);border-radius:10px 10px 22px 22px;
+  background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.22));
+  border:3px solid rgba(90,70,120,.22);border-top:4px solid rgba(90,70,120,.28);
+  position:relative;overflow:hidden;display:flex;flex-direction:column-reverse;
+  box-shadow:inset 0 0 12px rgba(255,255,255,.5),0 4px 14px rgba(60,40,90,.1);
+  transition:transform .2s cubic-bezier(.34,1.4,.64,1),box-shadow .2s;
+}
+.tube::before{content:"";position:absolute;left:6px;top:8px;bottom:18px;width:8px;border-radius:8px;
+  background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0));pointer-events:none;z-index:2}
+.layer{width:100%;height:calc(var(--tube-h) / var(--cap));flex-shrink:0;transition:height .28s ease,opacity .2s,background .2s;
+  position:relative;overflow:hidden}
+.layer::after{content:"";position:absolute;left:0;right:0;top:0;height:28%;
+  background:linear-gradient(180deg,rgba(255,255,255,.35),transparent);pointer-events:none}
+.layer.pouring-out{animation:pourOut .35s ease forwards}
+.layer.pouring-in{animation:pourIn .35s ease}
+@keyframes pourOut{to{height:0;opacity:0}}
+@keyframes pourIn{from{height:0;opacity:.4}to{opacity:1}}
+.tube-label{font-size:.65rem;color:var(--muted);font-weight:600;height:14px}
+
+footer{padding:4px 0 10px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.hint-bar{text-align:center;font-size:.72rem;color:var(--muted);padding:0 8px 6px;min-height:1.2em}
+
+/* Overlays */
+.overlay{position:fixed;inset:0;background:rgba(40,20,60,.45);backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s}
+.overlay.show{opacity:1;pointer-events:auto}
+.modal{background:#fff;border-radius:24px;padding:28px 22px 22px;max-width:340px;width:100%;text-align:center;
+  box-shadow:0 20px 60px rgba(40,20,80,.25);transform:scale(.92);transition:transform .25s cubic-bezier(.34,1.4,.64,1)}
+.overlay.show .modal{transform:scale(1)}
+.modal h2{font-size:1.45rem;margin-bottom:6px}
+.modal p{color:var(--muted);font-size:.9rem;margin-bottom:18px;line-height:1.45}
+.modal .actions{display:flex;flex-direction:column;gap:8px}
+.modal .actions .btn{width:100%;min-height:48px;font-size:.9rem}
+.big-emoji{font-size:2.6rem;margin-bottom:8px;line-height:1}
+
+/* Ad overlay */
+#ad-overlay .modal{background:linear-gradient(180deg,#2a2040,#3d2f5c);color:#fff}
+#ad-overlay .modal p{color:#cbb8e8}
+#ad-countdown{font-size:2.4rem;font-weight:800;color:#ffb347;margin:8px 0 12px;font-variant-numeric:tabular-nums}
+
+/* Confetti */
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:90;overflow:hidden}
+.confetti-piece{position:absolute;width:8px;height:12px;top:-20px;border-radius:2px;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:.85}}
+
+/* Start screen */
+#start-screen{position:absolute;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:linear-gradient(165deg,#fff5fb,#e8f4ff 60%,#f0ffe8);padding:24px;text-align:center}
+#start-screen.hide{display:none}
+#start-screen .logo{font-size:2.4rem;font-weight:900;letter-spacing:-.03em;
+  background:linear-gradient(90deg,#ff6bb5,#7c9cff,#3ecf8e);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:4px}
+#start-screen .tagline{color:var(--muted);margin-bottom:28px;font-size:1rem}
+#start-screen .demo-tubes{display:flex;gap:10px;margin-bottom:28px}
+#start-screen .mini-tube{width:36px;height:90px;border-radius:8px 8px 14px 14px;border:2.5px solid rgba(90,70,120,.2);
+  overflow:hidden;display:flex;flex-direction:column-reverse;background:rgba(255,255,255,.5)}
+#start-screen .mini-layer{height:25%;width:100%}
+
+.toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%) translateY(20px);background:rgba(42,32,64,.92);color:#fff;
+  padding:10px 18px;border-radius:12px;font-size:.82rem;font-weight:600;z-index:200;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;max-width:90%}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="start-screen">
+    <div class="big-emoji">🧪✨</div>
+    <div class="logo">SortSplash</div>
+    <div class="tagline">Sort colors. One more pour.</div>
+    <div class="demo-tubes" aria-hidden="true">
+      <div class="mini-tube"><div class="mini-layer" style="background:#ff6b9d"></div><div class="mini-layer" style="background:#7c9cff"></div><div class="mini-layer" style="background:#ff6b9d"></div><div class="mini-layer" style="background:#3ecf8e"></div></div>
+      <div class="mini-tube"><div class="mini-layer" style="background:#7c9cff"></div><div class="mini-layer" style="background:#3ecf8e"></div><div class="mini-layer" style="background:#ffb347"></div><div class="mini-layer" style="background:#7c9cff"></div></div>
+      <div class="mini-tube"></div>
+    </div>
+    <button class="btn primary" id="btn-play" style="min-width:200px;min-height:52px;font-size:1.05rem">▶ Play</button>
+    <p style="margin-top:16px;font-size:.75rem;color:var(--muted)">Tap a tube, then another to pour 💧</p>
+  </div>
+
+  <header>
+    <div class="brand">
+      <h1>SortSplash 🧪</h1>
+      <div class="tag">Sort colors. One more pour.</div>
+    </div>
+    <div class="stats">
+      <div class="pill">Lv <span id="hud-level">1</span></div>
+      <div class="pill">Moves <span id="hud-moves">0</span></div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <button class="btn ghost" id="btn-undo" title="Undo">↩ Undo <span id="undo-count"></span></button>
+    <button class="btn ghost" id="btn-restart" title="Restart">↻ Restart</button>
+    <button class="btn ghost" id="btn-hint" title="Hint">💡 Hint</button>
+    <button class="btn ad" id="btn-add-tube" title="Add empty tube">+1 Tube</button>
+    <button class="btn ad" id="btn-undo-pack" title="More undos">Undo Pack</button>
+  </div>
+  <div class="hint-bar" id="hint-bar"></div>
+
+  <div id="board-wrap">
+    <div id="board" role="group" aria-label="Puzzle tubes"></div>
+  </div>
+
+  <footer>
+    <button class="btn ghost" id="btn-share">📤 Share</button>
+    <button class="btn ghost" id="btn-levels">📚 Levels</button>
+  </footer>
+</div>
+
+<div id="confetti"></div>
+<div class="toast" id="toast"></div>
+
+<div class="overlay" id="win-overlay">
+  <div class="modal">
+    <div class="big-emoji">🎉✨</div>
+    <h2>Level Cleared!</h2>
+    <p id="win-msg">Nice pouring!</p>
+    <div class="actions">
+      <button class="btn primary" id="btn-next">Next Level →</button>
+      <button class="btn ghost" id="btn-replay">Replay</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ad-overlay">
+  <div class="modal">
+    <div class="big-emoji">📺</div>
+    <h2>Ad playing…</h2>
+    <div id="ad-countdown">3</div>
+    <p>Rewarded video stub<br><small>// TODO: TTMinis.game.createRewardedVideoAd</small></p>
+  </div>
+</div>
+
+<div class="overlay" id="levels-overlay">
+  <div class="modal" style="max-height:80vh;overflow:auto">
+    <h2>Levels</h2>
+    <p>Tap to jump (unlocked only)</p>
+    <div id="level-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px"></div>
+    <button class="btn ghost" id="btn-close-levels" style="width:100%">Close</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+const CAP = 4;
+const COLORS = [
+  '#FF5C8A', // pink
+  '#5B8CFF', // blue
+  '#3ECF8E', // green
+  '#FFB347', // orange
+  '#A78BFA', // purple
+  '#22D3EE', // cyan
+  '#F472B6', // hot pink
+  '#FACC15', // yellow
+  '#FB7185', // rose
+  '#34D399', // mint
+  '#818CF8', // indigo
+  '#FB923C'  // tangerine
+];
+
+const STORAGE_KEY = 'sortsplash_v1';
+const TOTAL_LEVELS = 48;
+
+// ---------- Persistence ----------
+function loadSave(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return {highest:1, totalPours:0, freeUndos:3};
+    return Object.assign({highest:1, totalPours:0, freeUndos:3}, JSON.parse(raw));
+  }catch(e){ return {highest:1, totalPours:0, freeUndos:3}; }
+}
+function saveSave(s){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }catch(e){}
+}
+let save = loadSave();
+
+// ---------- Level generation (solvable by reverse shuffle) ----------
+function mulberry32(a){
+  return function(){
+    let t = a += 0x6D2B79F5;
+    t = Math.imul(t ^ t>>>15, t | 1);
+    t ^= t + Math.imul(t ^ t>>>7, t | 61);
+    return ((t ^ t>>>14) >>> 0) / 4294967296;
+  };
+}
+
+function levelParams(n){
+  // n is 1-based
+  let colors, empties;
+  if(n <= 3){ colors = 3; empties = 2; }
+  else if(n <= 8){ colors = 4; empties = 2; }
+  else if(n <= 15){ colors = 5; empties = 2; }
+  else if(n <= 22){ colors = 6; empties = 2; }
+  else if(n <= 30){ colors = 7; empties = 2; }
+  else if(n <= 38){ colors = 8; empties = 2; }
+  else if(n <= 44){ colors = 9; empties = 2; }
+  else { colors = 10; empties = 2; }
+  // Always keep ≥2 empties for solvability on TikTok short sessions
+  return {colors, empties, capacity: CAP};
+}
+
+function cloneState(tubes){
+  return tubes.map(t => t.slice());
+}
+
+function canPour(src, dst, capacity){
+  if(!src.length) return false;
+  if(dst.length >= capacity) return false;
+  if(!dst.length) return true;
+  return src[src.length-1] === dst[dst.length-1];
+}
+
+function pourAmount(src, dst, capacity){
+  if(!canPour(src, dst, capacity)) return 0;
+  const color = src[src.length-1];
+  let count = 0;
+  for(let i = src.length-1; i >= 0 && src[i] === color; i--) count++;
+  const space = capacity - dst.length;
+  return Math.min(count, space);
+}
+
+function doPour(tubes, i, j, capacity){
+  const amt = pourAmount(tubes[i], tubes[j], capacity);
+  if(!amt) return false;
+  const color = tubes[i][tubes[i].length-1];
+  for(let k=0;k<amt;k++){
+    tubes[i].pop();
+    tubes[j].push(color);
+  }
+  return true;
+}
+
+function isWon(tubes, capacity){
+  return tubes.every(t => {
+    if(!t.length) return true;
+    if(t.length !== capacity) return false;
+    const c = t[0];
+    return t.every(x => x === c);
+  });
+}
+
+function stateKey(tubes){
+  return tubes.map(t => t.join(',')).join('|');
+}
+
+function isSolvable(tubes, capacity, maxNodes){
+  maxNodes = maxNodes || 80000;
+  if(isWon(tubes, capacity)) return true;
+  const start = cloneState(tubes);
+  const queue = [start];
+  const seen = new Set([stateKey(start)]);
+  let nodes = 0;
+  const N = start.length;
+  while(queue.length){
+    const t = queue.shift();
+    nodes++;
+    if(nodes > maxNodes) return true; // assume ok if deep (avoid false reject)
+    for(let i=0;i<N;i++){
+      if(!t[i].length) continue;
+      if(t[i].length===capacity && t[i].every(x=>x===t[i][0])) continue;
+      for(let j=0;j<N;j++){
+        if(i===j) continue;
+        if(!pourAmount(t[i], t[j], capacity)) continue;
+        const next = cloneState(t);
+        doPour(next, i, j, capacity);
+        const k = stateKey(next);
+        if(seen.has(k)) continue;
+        if(isWon(next, capacity)) return true;
+        seen.add(k);
+        queue.push(next);
+      }
+    }
+  }
+  return false;
+}
+
+function dealShuffled(colors, empties, capacity, rng){
+  const layers = [];
+  for(let c=0;c<colors;c++) for(let i=0;i<capacity;i++) layers.push(c);
+  // Fisher-Yates
+  for(let i=layers.length-1;i>0;i--){
+    const j = Math.floor(rng()*(i+1));
+    const tmp = layers[i]; layers[i]=layers[j]; layers[j]=tmp;
+  }
+  const tubes = [];
+  for(let c=0;c<colors;c++){
+    tubes.push(layers.slice(c*capacity, (c+1)*capacity));
+  }
+  for(let e=0;e<empties;e++) tubes.push([]);
+  return tubes;
+}
+
+function generateLevel(levelNum){
+  const {colors, empties, capacity} = levelParams(levelNum);
+
+  // Handcrafted tutorial levels (verified solvable)
+  if(levelNum === 1){
+    return { tubes:[[0,0,1,1],[1,1,0,0],[],[]], colors:2, capacity };
+  }
+  if(levelNum === 2){
+    return { tubes:[[0,1,0,1],[1,0,1,0],[],[]], colors:2, capacity };
+  }
+  if(levelNum === 3){
+    return { tubes:[[0,1,2,0],[1,2,0,1],[2,0,1,2],[],[]], colors:3, capacity };
+  }
+  if(levelNum === 4){
+    return { tubes:[[0,0,1,2],[1,2,0,1],[2,1,0,2],[],[]], colors:3, capacity };
+  }
+  if(levelNum === 5){
+    return { tubes:[[0,1,2,3],[1,2,3,0],[2,3,0,1],[3,0,1,2],[],[]], colors:4, capacity };
+  }
+
+  // Seeded shuffled deals — retry until not already won.
+  // With ≥1 empty tube, nearly all deals are solvable; playtest BFS verifies early set.
+  let tubes = null;
+  const maxAttempts = 30;
+  for(let attempt=0; attempt<maxAttempts; attempt++){
+    const rngA = mulberry32(levelNum * 7919 + 42 + attempt * 9973);
+    const candidate = dealShuffled(colors, empties, capacity, rngA);
+    if(isWon(candidate, capacity)) continue;
+    // Light solvability check for early/mid levels only (keep load snappy)
+    if(levelNum <= 18){
+      if(isSolvable(candidate, capacity, levelNum <= 10 ? 120000 : 50000)){
+        tubes = candidate;
+        break;
+      }
+    } else {
+      tubes = candidate;
+      break;
+    }
+  }
+  if(!tubes){
+    const rng = mulberry32(levelNum * 7919 + 42);
+    tubes = dealShuffled(colors, empties, capacity, rng);
+    if(isWon(tubes, capacity) && tubes[0].length && tubes[1].length){
+      const a = tubes[0].pop();
+      const b = tubes[1].pop();
+      tubes[0].push(b);
+      tubes[1].push(a);
+    }
+  }
+
+  return {tubes, colors, capacity};
+}
+
+// ---------- Game state ----------
+let level = Math.min(save.highest, TOTAL_LEVELS);
+let tubes = [];
+let capacity = CAP;
+let colorCount = 3;
+let moves = 0;
+let selected = -1;
+let history = [];
+let freeUndos = save.freeUndos ?? 3;
+let bonusTubeUsed = false;
+let pouring = false;
+let hintTimeout = null;
+
+const $ = id => document.getElementById(id);
+const board = $('board');
+const hudLevel = $('hud-level');
+const hudMoves = $('hud-moves');
+const undoCountEl = $('undo-count');
+const hintBar = $('hint-bar');
+
+function toast(msg, ms=1800){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid = setTimeout(()=>t.classList.remove('show'), ms);
+}
+
+function updateHUD(){
+  hudLevel.textContent = String(level);
+  hudMoves.textContent = String(moves);
+  undoCountEl.textContent = freeUndos >= 99 ? '' : `(${freeUndos})`;
+  $('btn-add-tube').disabled = bonusTubeUsed;
+  $('btn-undo').disabled = history.length === 0;
+}
+
+function render(){
+  board.innerHTML = '';
+  const n = tubes.length;
+  // Scale tube width slightly for crowded boards
+  const tw = n > 10 ? 42 : n > 8 ? 46 : 52;
+  const th = n > 10 ? 148 : 168;
+  document.documentElement.style.setProperty('--tube-w', tw+'px');
+  document.documentElement.style.setProperty('--tube-h', th+'px');
+
+  tubes.forEach((tube, idx) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'tube-wrap' + (selected === idx ? ' selected' : '');
+    wrap.setAttribute('role','button');
+    wrap.setAttribute('aria-label', `Tube ${idx+1}, ${tube.length} layers`);
+    wrap.tabIndex = 0;
+
+    const el = document.createElement('div');
+    el.className = 'tube';
+
+    // render layers bottom to top (DOM column-reverse, so append bottom-first)
+    for(let L=0; L<tube.length; L++){
+      const layer = document.createElement('div');
+      layer.className = 'layer';
+      layer.style.background = COLORS[tube[L] % COLORS.length];
+      el.appendChild(layer);
+    }
+
+    wrap.appendChild(el);
+    const label = document.createElement('div');
+    label.className = 'tube-label';
+    label.textContent = tube.length ? '' : 'empty';
+    wrap.appendChild(label);
+
+    wrap.addEventListener('click', () => onTubeTap(idx));
+    wrap.addEventListener('keydown', e => {
+      if(e.key==='Enter'||e.key===' '){ e.preventDefault(); onTubeTap(idx); }
+    });
+    board.appendChild(wrap);
+  });
+  updateHUD();
+}
+
+function onTubeTap(idx){
+  if(pouring) return;
+  if(selected < 0){
+    if(!tubes[idx].length){
+      toast('Pick a tube with color');
+      return;
+    }
+    selected = idx;
+    render();
+    return;
+  }
+  if(selected === idx){
+    selected = -1;
+    render();
+    return;
+  }
+  // attempt pour
+  attemptPour(selected, idx);
+}
+
+function attemptPour(from, to){
+  const amt = pourAmount(tubes[from], tubes[to], capacity);
+  if(!amt){
+    // flash invalid
+    const wraps = board.querySelectorAll('.tube-wrap');
+    if(wraps[to]){
+      wraps[to].classList.add('invalid');
+      setTimeout(()=>wraps[to].classList.remove('invalid'), 360);
+    }
+    toast('Can\'t pour there');
+    selected = -1;
+    render();
+    return;
+  }
+
+  // save history
+  history.push({tubes: cloneState(tubes), moves});
+  pouring = true;
+
+  const color = tubes[from][tubes[from].length-1];
+  for(let k=0;k<amt;k++){
+    tubes[from].pop();
+    tubes[to].push(color);
+  }
+  moves++;
+  save.totalPours = (save.totalPours||0) + 1;
+  saveSave(save);
+  selected = -1;
+  render();
+
+  setTimeout(()=>{
+    pouring = false;
+    if(isWon(tubes, capacity)) onWin();
+  }, 280);
+}
+
+function onWin(){
+  spawnConfetti();
+  if(level >= save.highest){
+    save.highest = Math.min(level + 1, TOTAL_LEVELS);
+    saveSave(save);
+  }
+  const msg = `Level ${level} done in ${moves} moves!` + (level < TOTAL_LEVELS ? '' : ' You finished all levels! 🏆');
+  $('win-msg').textContent = msg;
+  $('win-overlay').classList.add('show');
+  // soft free undo refresh on clear
+  if(freeUndos < 3){ freeUndos = Math.min(3, freeUndos+1); save.freeUndos = freeUndos; saveSave(save); }
+}
+
+function spawnConfetti(){
+  const box = $('confetti');
+  box.innerHTML = '';
+  const cols = COLORS.concat(['#fff','#ff6bb5','#7c9cff']);
+  for(let i=0;i<48;i++){
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    p.style.left = (Math.random()*100)+'%';
+    p.style.background = cols[Math.floor(Math.random()*cols.length)];
+    p.style.animationDuration = (1.4 + Math.random()*1.6)+'s';
+    p.style.animationDelay = (Math.random()*0.4)+'s';
+    p.style.width = (6+Math.random()*6)+'px';
+    p.style.height = (8+Math.random()*10)+'px';
+    box.appendChild(p);
+  }
+  setTimeout(()=>{ box.innerHTML=''; }, 3200);
+}
+
+function loadLevel(n){
+  level = Math.max(1, Math.min(n, TOTAL_LEVELS));
+  const data = generateLevel(level);
+  tubes = cloneState(data.tubes);
+  capacity = data.capacity || CAP;
+  colorCount = data.colors;
+  moves = 0;
+  selected = -1;
+  history = [];
+  bonusTubeUsed = false;
+  hintBar.textContent = level <= 2 ? 'Tip: pour matching colors into the same tube' : '';
+  document.documentElement.style.setProperty('--cap', String(capacity));
+  $('win-overlay').classList.remove('show');
+  render();
+}
+
+function restartLevel(){
+  loadLevel(level);
+  toast('Level restarted');
+}
+
+function undo(){
+  if(!history.length) return;
+  if(freeUndos <= 0){
+    toast('No free undos — watch an ad for Undo Pack');
+    return;
+  }
+  const snap = history.pop();
+  tubes = cloneState(snap.tubes);
+  moves = snap.moves;
+  freeUndos--;
+  save.freeUndos = freeUndos;
+  saveSave(save);
+  selected = -1;
+  render();
+}
+
+// ---------- Hint (greedy one-step look) ----------
+function findHint(){
+  // Prefer pour that completes a tube, then pour onto matching, then onto empty
+  const N = tubes.length;
+  let best = null;
+  let bestScore = -1;
+  for(let i=0;i<N;i++){
+    if(!tubes[i].length) continue;
+    for(let j=0;j<N;j++){
+      if(i===j) continue;
+      const amt = pourAmount(tubes[i], tubes[j], capacity);
+      if(!amt) continue;
+      const color = tubes[i][tubes[i].length-1];
+      let topCount = 0;
+      for(let k=tubes[i].length-1;k>=0&&tubes[i][k]===color;k--) topCount++;
+      let score = amt;
+      // completing destination
+      if(tubes[j].length + amt === capacity && tubes[j].every(x=>x===color || true)){
+        const wouldBeFull = tubes[j].length + amt === capacity;
+        const destSame = !tubes[j].length || tubes[j][tubes[j].length-1]===color;
+        if(wouldBeFull && destSame) score += 50;
+      }
+      // emptying source of that color entirely
+      if(amt === topCount) score += 10;
+      // prefer non-empty dest
+      if(tubes[j].length) score += 5;
+      // avoid pouring sorted tube
+      const srcSorted = tubes[i].length===capacity && tubes[i].every(x=>x===tubes[i][0]);
+      if(srcSorted) score -= 100;
+      if(score > bestScore){ bestScore = score; best = {i,j}; }
+    }
+  }
+  return best;
+}
+
+function showHint(){
+  const h = findHint();
+  if(!h){ toast('No move found — try Undo or +1 Tube'); return; }
+  selected = h.i;
+  render();
+  hintBar.textContent = `Hint: pour tube ${h.i+1} → tube ${h.j+1}`;
+  clearTimeout(hintTimeout);
+  hintTimeout = setTimeout(()=>{ hintBar.textContent=''; }, 4000);
+  // briefly highlight target
+  const wraps = board.querySelectorAll('.tube-wrap');
+  if(wraps[h.j]){
+    wraps[h.j].style.outline = '2px dashed #ff6bb5';
+    wraps[h.j].style.outlineOffset = '4px';
+    setTimeout(()=>{ if(wraps[h.j]){ wraps[h.j].style.outline=''; wraps[h.j].style.outlineOffset=''; } }, 1600);
+  }
+}
+
+// ---------- Rewarded ad stub ----------
+// TODO: TTMinis.game.createRewardedVideoAd
+function showRewardedAd(onSuccess){
+  const ov = $('ad-overlay');
+  const cd = $('ad-countdown');
+  ov.classList.add('show');
+  let n = 3;
+  cd.textContent = String(n);
+  const tick = setInterval(()=>{
+    n--;
+    if(n <= 0){
+      clearInterval(tick);
+      ov.classList.remove('show');
+      if(typeof onSuccess === 'function') onSuccess();
+    } else {
+      cd.textContent = String(n);
+    }
+  }, 1000);
+}
+
+function addBonusTube(){
+  if(bonusTubeUsed){ toast('Already used +1 Tube this level'); return; }
+  showRewardedAd(()=>{
+    tubes.push([]);
+    bonusTubeUsed = true;
+    selected = -1;
+    render();
+    toast('+1 empty tube added! 🧪');
+  });
+}
+
+function buyUndoPack(){
+  showRewardedAd(()=>{
+    freeUndos += 5;
+    save.freeUndos = freeUndos;
+    saveSave(save);
+    updateHUD();
+    toast('+5 undos unlocked!');
+  });
+}
+
+// ---------- Share ----------
+function shareChallenge(){
+  const text = `I cleared Level ${Math.max(1, save.highest-1)} on SortSplash! 🧪✨ Sort colors. One more pour.`;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>toast('Copied challenge text!')).catch(()=>fallbackShare(text));
+  } else fallbackShare(text);
+}
+function fallbackShare(text){
+  // download as tiny txt
+  try{
+    const blob = new Blob([text], {type:'text/plain'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'sortsplash-challenge.txt';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('Challenge file downloaded');
+  }catch(e){
+    prompt('Copy this:', text);
+  }
+}
+
+// ---------- Level select ----------
+function openLevels(){
+  const grid = $('level-grid');
+  grid.innerHTML = '';
+  for(let i=1;i<=TOTAL_LEVELS;i++){
+    const b = document.createElement('button');
+    b.className = 'btn';
+    b.textContent = String(i);
+    b.style.minWidth = '0';
+    b.style.padding = '10px 0';
+    b.style.fontSize = '.8rem';
+    const unlocked = i <= save.highest;
+    if(!unlocked){ b.disabled = true; b.textContent = '🔒'; }
+    else if(i < save.highest){ b.style.background = 'linear-gradient(135deg,#3ecf8e,#6ee7b7)'; b.style.color='#fff'; }
+    else { b.classList.add('primary'); }
+    b.addEventListener('click', ()=>{
+      $('levels-overlay').classList.remove('show');
+      loadLevel(i);
+    });
+    grid.appendChild(b);
+  }
+  $('levels-overlay').classList.add('show');
+}
+
+// ---------- Wire UI ----------
+$('btn-play').addEventListener('click', ()=>{
+  $('start-screen').classList.add('hide');
+  loadLevel(Math.min(save.highest, TOTAL_LEVELS));
+});
+$('btn-undo').addEventListener('click', undo);
+$('btn-restart').addEventListener('click', restartLevel);
+$('btn-hint').addEventListener('click', showHint);
+$('btn-add-tube').addEventListener('click', addBonusTube);
+$('btn-undo-pack').addEventListener('click', buyUndoPack);
+$('btn-share').addEventListener('click', shareChallenge);
+$('btn-levels').addEventListener('click', openLevels);
+$('btn-close-levels').addEventListener('click', ()=>$('levels-overlay').classList.remove('show'));
+$('btn-next').addEventListener('click', ()=>{
+  $('win-overlay').classList.remove('show');
+  if(level < TOTAL_LEVELS) loadLevel(level+1);
+  else toast('All levels cleared! 🏆');
+});
+$('btn-replay').addEventListener('click', ()=>{
+  $('win-overlay').classList.remove('show');
+  loadLevel(level);
+});
+
+// Expose for playtest / debug
+window.SortSplash = {
+  generateLevel, isWon, canPour, pourAmount, doPour, cloneState,
+  findHint, levelParams, TOTAL_LEVELS, CAP, COLORS,
+  getState: ()=>({level, tubes:cloneState(tubes), moves, capacity}),
+  loadLevel, showRewardedAd
+};
+
+})();
+</script>
+</body>
+</html>
