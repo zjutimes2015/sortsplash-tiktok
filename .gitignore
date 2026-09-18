@@ -2,3 +2,8 @@
 .DS_Store
 Thumbs.db
 *.log
+library/
+temp/
+local/
+build/
+profiles/

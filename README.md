@@ -74,17 +74,22 @@ Placements:
 
 ---
 
+## Cocos Creator 3.8 (WeChat Mini Game)
+
+Production path is **`cocos/`** — open that folder in **Cocos Creator 3.8.8**, preview `assets/scenes/main.scene`, then build platform **微信小游戏**. See [`cocos/README.md`](cocos/README.md) and [`cocos/WECHAT.md`](cocos/WECHAT.md).
+
+This `index.html` is a **playable design reference only** (levels, pour rules, HUD). Do not upload the HTML as a Mini Game package.
+
 ## Project layout
 
 ```
-sortsplash/
-  index.html          # single-file game
+sortsplash-tiktok/
+  index.html          # HTML prototype (design reference)
   README.md
   PLAYTEST.md
   playtest-solver.mjs # headless solvability checks
+  cocos/              # Cocos Creator 3.8.8 + TypeScript (WeChat export)
 ```
-
-Zip: `../sortsplash.zip`
 
 ---
 
@@ -92,6 +97,6 @@ Zip: `../sortsplash.zip`
 
 **SortSplash**（颜色倒水 / 试管排序）超休闲原型：打开 `index.html` 即可玩。适合海外 TikTok 益智短时循环，带激励视频广告桩（+1 试管、Undo 包）。
 
-**重要：** HTML 不能作为 TikTok Native 上架；量产请用 **Cocos Creator Native** 重做导出，本仓库作可玩原型与交互/关卡参考。广告对接：`TTMinis.game.createRewardedVideoAd`。
+**重要：** HTML 不能作为小游戏上架包。量产请用 **`cocos/` + Cocos Creator 3.8.8** 打开并构建 **微信小游戏**（清单见 `cocos/WECHAT.md`）。根目录 HTML 仍作玩法/关卡参考。微信广告：`wx.createRewardedVideoAd`（`AdBridge.ts`）。
 
 建议仓库名：`sortsplash-tiktok`。
