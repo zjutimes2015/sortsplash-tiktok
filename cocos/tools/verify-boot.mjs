@@ -1,8 +1,14 @@
 #!/usr/bin/env node
 /**
- * Headless smoke: GameManager.onLoad must wire UIRoot/BoardRoot from
- * ensureHierarchy() return values (not find()), then always call buildAll + showCover.
+ * Headless smoke: preview boot path for SortSplash.
  * Run from cocos/:  node tools/verify-boot.mjs
+ *
+ * Asserts:
+ * - GameController is a child of Canvas (not a Scene sibling)
+ * - Scene mounts only GameManager via compressUuid(meta.uuid, false)
+ * - onLoad + start() boot; start rebuilds Play cover if missing
+ * - no find(); Sprite/Label color fills (Graphics is not required)
+ * - wechatgame export checklist still documented
  */
 import fs from 'fs';
 import path from 'path';
@@ -22,88 +28,115 @@ function assert(cond, msg) {
     }
 }
 
-console.log('=== SortSplash boot / preview wiring ===');
-
-const gm = read('assets/scripts/GameManager.ts');
-const ui = read('assets/scripts/UIManager.ts');
-const scene = JSON.parse(read('assets/scenes/main.scene'));
-const wechat = read('WECHAT.md');
-const builder = JSON.parse(read('settings/v2/packages/builder.json'));
-const project = JSON.parse(read('settings/v2/packages/project.json'));
-const gmMeta = JSON.parse(read('assets/scripts/GameManager.ts.meta'));
+/** Creator compressUuid(uuid, false) — 5 hex prefix + base64 of remaining hex. */
+const BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+function compressUuid(uuid) {
+    const str = String(uuid).replace(/-/g, '').toLowerCase();
+    assert(str.length === 32, `uuid hex length 32, got ${str.length}`);
+    const head = str.slice(0, 5);
+    const hex = str.slice(5);
+    let out = head;
+    for (let i = 0; i < hex.length; i += 3) {
+        const n = parseInt(hex.substr(i, 3).padEnd(3, '0'), 16);
+        out += BASE64[(n >> 6) & 63] + BASE64[n & 63];
+    }
+    return out;
+}
 
 function stripComments(src) {
     return src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/.*$/gm, ' ');
 }
 
-const onLoadMatch = gm.match(/onLoad\s*\(\s*\)\s*\{[\s\S]*?\n    \}/);
-assert(!!onLoadMatch, 'onLoad() block found');
-const onLoad = onLoadMatch[0];
-const onLoadCode = stripComments(onLoad);
+console.log('=== SortSplash boot / preview wiring ===');
+
+const gm = read('assets/scripts/GameManager.ts');
+const ui = read('assets/scripts/UIManager.ts');
+const paint = read('assets/scripts/UiPaint.ts');
+const scene = JSON.parse(read('assets/scenes/main.scene'));
+const wechat = read('WECHAT.md');
+const builder = JSON.parse(read('settings/v2/packages/builder.json'));
+const project = JSON.parse(read('settings/v2/packages/project.json'));
+const gmMeta = JSON.parse(read('assets/scripts/GameManager.ts.meta'));
 const gmCode = stripComments(gm);
 
-assert(onLoad.includes('try'), 'onLoad wrapped in try/catch');
-assert(onLoad.includes('console.error'), 'onLoad logs failures with console.error');
-assert(!/\bfind\s*\(/.test(onLoadCode), 'onLoad does not call find()');
 assert(!/\bfind\s*\(/.test(gmCode), 'GameManager.ts does not call find()');
-assert(/ensureHierarchy\s*\(/.test(onLoad), 'onLoad calls ensureHierarchy()');
-assert(/setUIRoot\s*\(\s*ui\s*\)/.test(onLoad), 'onLoad sets uiRoot from ensureHierarchy ui');
-assert(/setBoardRoot\s*\(\s*board\s*\)/.test(onLoad), 'onLoad sets boardRoot from ensureHierarchy board');
-assert(!/if\s*\(\s*ui\s*\)\s*this\._ui/.test(onLoad), 'setUIRoot is not gated on a find() result');
-assert(!/if\s*\(\s*board\s*\)\s*this\._tubes/.test(onLoad), 'setBoardRoot is not gated on a find() result');
-assert(/buildAll\s*\(\s*\)/.test(onLoad), 'onLoad always calls buildAll()');
-assert(/showCover\s*\(\s*\)/.test(onLoad), 'onLoad always calls showCover()');
+assert(/boot\s*\(\s*phase/.test(gm), 'boot(phase, allowCreateCanvas) exists');
+assert(/onLoad\s*\(\s*\)\s*\{[\s\S]*?this\.boot\(\s*'onLoad'\s*,\s*false\s*\)/.test(gm),
+    'onLoad calls boot("onLoad", false) — will not create a nested Canvas');
+assert(/start\s*\(\s*\)\s*\{/.test(gm), 'start() exists');
+assert(/hasCover\s*\(\s*\)/.test(gm) && /boot\(\s*'start'\s*,\s*true\s*\)/.test(gm),
+    'start() rebuilds via boot("start", true) if cover missing');
+assert(/console\.error/.test(gm) && /console\.log/.test(gm), 'boot logs success and failure');
+assert(/console\.error/.test(ui), 'UIManager logs buildAll failure');
+assert(/Play cover/.test(gm) || /SUCCESS/.test(gm), 'boot success log mentions cover');
 
-assert(/ensureHierarchy\s*\(\s*\)\s*:\s*\{\s*canvas:\s*Node;\s*board:\s*Node;\s*ui:\s*Node\s*\}/.test(gm)
-    || /return\s*\{\s*canvas,\s*board,\s*ui\s*\}/.test(gm),
-    'ensureHierarchy returns canvas, board, ui');
-assert(/ensureChild\s*\(\s*['"]BoardRoot['"]/.test(gm)
-    || /getChildByName\s*\(\s*['"]BoardRoot['"]\s*\)/.test(gm), 'BoardRoot via getChildByName / ensureChild');
-assert(/ensureChild\s*\(\s*['"]UIRoot['"]/.test(gm)
-    || /getChildByName\s*\(\s*['"]UIRoot['"]\s*\)/.test(gm), 'UIRoot via getChildByName / ensureChild');
-assert(/ensureComponents\s*\(/.test(onLoad), 'onLoad calls ensureComponents()');
-assert(/Layers\.Enum\.UI_2D/.test(gm), 'UI nodes use Layers.Enum.UI_2D');
+assert(/ensureHierarchy\s*\(/.test(gm), 'ensureHierarchy is used');
+assert(/return\s*\{\s*canvas,\s*board,\s*ui\s*\}/.test(gm), 'ensureHierarchy returns canvas, board, ui');
+assert(/setUIRoot\s*\(\s*ui\s*\)/.test(gm), 'boot sets uiRoot from ensureHierarchy ui');
+assert(/setBoardRoot\s*\(\s*board\s*\)/.test(gm), 'boot sets boardRoot from ensureHierarchy board');
+assert(/buildAll\s*\(\s*\)/.test(gm), 'boot calls buildAll()');
+assert(/showCover\s*\(\s*\)/.test(gm), 'boot calls showCover()');
+assert(/ensureComponents\s*\(/.test(gm), 'boot calls ensureComponents()');
+assert(/parent\.name === 'Canvas'|named\(this\.node\.parent,\s*'Canvas'\)/.test(gm),
+    'resolveCanvas uses parent name Canvas (GameController under Canvas)');
+assert(/allowCreateCanvas/.test(gm), 'Canvas create is gated so onLoad cannot nest a duplicate');
+assert(/reparent/.test(gm), 'runtime reparents GameController under Canvas if needed');
+assert(/Layers\.Enum\.UI_2D|UI_2D/.test(gm), 'UI nodes use UI_2D');
 assert(/ProjectionType\.ORTHO/.test(gm), 'Camera set to ORTHO');
 assert(/cameraComponent\s*=\s*camera/.test(gm), 'Canvas.cameraComponent linked');
+assert(/executionOrder/.test(gm) || /orderEarly/.test(gm), 'GameManager executionOrder so boot runs first');
 
 assert(/uiRoot is null/.test(ui), 'buildAll logs if uiRoot is null instead of silent return');
-assert(/useSystemFont/.test(ui), 'Labels request system font (3.8)');
+assert(/hasCover\s*\(/.test(ui), 'UIManager.hasCover() for start() retry');
+assert(/BtnPlay/.test(ui), 'cover builds BtnPlay');
+assert(/makeColorNode|paintSolid/.test(ui), 'cover uses Sprite/Label color nodes');
+const uiCcImport = ui.match(/import \{[\s\S]*?\} from 'cc'/);
+assert(uiCcImport && !/\bGraphics\b/.test(uiCcImport[0]), 'UIManager does not import Graphics from cc');
+
+assert(/paintSolid/.test(paint), 'UiPaint.paintSolid exists');
+assert(/█/.test(paint), 'Label block fallback (█) when SpriteFrame fails');
+assert(/SpriteFrame/.test(paint) && /Texture2D/.test(paint), 'Sprite 1x1 white texture fill');
+assert(/useSystemFont/.test(paint), 'Labels request system font (3.8)');
 
 const objects = Array.isArray(scene) ? scene : [];
+const sceneNode = objects.find((o) => o && o.__type__ === 'cc.Scene');
+const canvasNode = objects.find((o) => o && o.__type__ === 'cc.Node' && o._name === 'Canvas');
 const gameController = objects.find((o) => o && o.__type__ === 'cc.Node' && o._name === 'GameController');
-assert(!!gameController, 'scene has GameController node');
+assert(!!sceneNode && !!canvasNode && !!gameController, 'scene has Scene, Canvas, GameController');
+
+const canvasId = objects.indexOf(canvasNode);
+const gcId = objects.indexOf(gameController);
+assert(Array.isArray(sceneNode._children) && sceneNode._children.length === 1,
+    `Scene has exactly 1 child (Canvas), got ${(sceneNode._children || []).length}`);
+assert(sceneNode._children[0].__id__ === canvasId, 'Scene child 0 is Canvas');
+assert(gameController._parent && gameController._parent.__id__ === canvasId,
+    `GameController parent is Canvas (id ${canvasId}), got ${JSON.stringify(gameController._parent)}`);
+assert((canvasNode._children || []).some((c) => c.__id__ === gcId),
+    'Canvas children include GameController');
+
 const gcCompIds = (gameController._components || []).map((c) => c.__id__);
 assert(gcCompIds.length === 2, `GameController has 2 components (UITransform + GameManager), got ${gcCompIds.length}`);
-
 const gcComps = gcCompIds.map((id) => objects[id]);
 const types = gcComps.map((c) => c && c.__type__);
 assert(types.includes('cc.UITransform'), 'GameController keeps cc.UITransform');
+const ut = gcComps.find((c) => c && c.__type__ === 'cc.UITransform');
+assert(ut && ut._contentSize && ut._contentSize.width <= 1 && ut._contentSize.height <= 1,
+    'GameController UITransform is 1×1 so it does not steal Play clicks');
+
 const scriptTypes = types.filter((t) => t && t !== 'cc.UITransform');
 assert(scriptTypes.length === 1, 'GameController has exactly one custom script');
 const cid = scriptTypes[0];
 assert(/^[0-9a-zA-Z+/]{22,23}$/.test(cid) && !cid.includes('-'),
     `GameManager CID is compressed (no UUID hyphens): ${cid}`);
 
-const uuid = String(gmMeta.uuid || '').replace(/-/g, '');
-assert(uuid.startsWith('087c06'), 'GameManager.ts.meta UUID still matches expected prefix');
+const expectedCid = compressUuid(gmMeta.uuid);
+assert(cid === expectedCid,
+    `scene CID ${cid} must equal compressUuid(GameManager.ts.meta uuid) ${expectedCid}`);
+assert(String(gmMeta.uuid).replace(/-/g, '').startsWith('087c06'),
+    'GameManager.ts.meta UUID still matches expected prefix');
 
 const extraScripts = objects.filter((o) => o && typeof o.__type__ === 'string'
-    && o.__type__ !== 'cc.UITransform'
-    && o.__type__ !== 'cc.Widget'
-    && o.__type__ !== 'cc.Canvas'
-    && o.__type__ !== 'cc.Camera'
-    && o.__type__ !== 'cc.SceneAsset'
-    && o.__type__ !== 'cc.Scene'
-    && o.__type__ !== 'cc.Node'
-    && o.__type__ !== 'cc.SceneGlobals'
-    && o.__type__ !== 'cc.AmbientInfo'
-    && o.__type__ !== 'cc.ShadowsInfo'
-    && o.__type__ !== 'cc.SkyboxInfo'
-    && o.__type__ !== 'cc.FogInfo'
-    && o.__type__ !== 'cc.OctreeInfo'
-    && o.__type__ !== 'cc.SkinInfo'
-    && o.__type__ !== 'cc.LightProbeInfo'
-    && o.__type__ !== 'cc.PostSettingsInfo');
+    && !String(o.__type__).startsWith('cc.'));
 assert(extraScripts.length === 1, `scene custom scripts should be GameManager only, got ${extraScripts.length}`);
 
 const cameraNode = objects.find((o) => o && o.__type__ === 'cc.Node' && o._name === 'Camera');
@@ -127,9 +160,14 @@ assert(/build\/wechatgame/.test(wechat), 'WECHAT.md output build/wechatgame');
 assert(/微信开发者工具/.test(wechat), 'WECHAT.md mentions 微信开发者工具');
 assert(/Portrait|竖屏/.test(wechat), 'WECHAT.md portrait orientation');
 assert(/main\.scene/.test(wechat), 'WECHAT.md start scene main');
+assert(/GameController/.test(wechat) && /Canvas/.test(wechat), 'WECHAT.md documents GameController under Canvas');
+assert(/verify-boot/.test(wechat), 'WECHAT.md documents boot smoke test');
+assert(/▶|Play/.test(wechat), 'WECHAT.md preview path mentions Play cover');
 
 assert(fs.existsSync(path.join(root, '..', 'index.html')), 'root HTML prototype kept');
+assert(fs.existsSync(path.join(root, 'assets/scripts/UiPaint.ts')), 'UiPaint helper present');
+assert(fs.existsSync(path.join(root, 'assets/scripts/UiPaint.ts.meta')), 'UiPaint.ts.meta present');
 
-console.log('onLoad wires uiRoot from ensureHierarchy() — will not skip buildAll for missing find()');
-console.log('GameController scripts: UITransform + compressed GameManager CID only');
+console.log('CID', cid, '==', expectedCid);
+console.log('GameController parent = Canvas; onLoad+start boot without find()');
 console.log('ALL PASS');

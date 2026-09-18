@@ -1,10 +1,16 @@
 /**
  * SortSplash game flow — port of the HTML prototype.
- * Ensures Canvas + ORTHO UI camera so preview is not black.
+ *
+ * Preview boot (Creator ▶ browser):
+ * - GameController lives UNDER Canvas (not a Scene sibling) so Labels/Sprites
+ *   are in the UI tree the ORTHO camera actually sees.
+ * - onLoad may run before Scene children are queryable; start() rebuilds the
+ *   Play cover if it is still missing.
+ * - Never call find() — parent / scene + getChildByName only.
  */
 import {
     _decorator, Component, Node, UITransform, Widget, Canvas, Camera,
-    director, view, ResolutionPolicy, Layers, Color,
+    director, view, ResolutionPolicy, Color,
 } from 'cc';
 import { LevelManager, TOTAL_LEVELS, CAP } from './LevelManager';
 import { TubeManager } from './TubeManager';
@@ -12,8 +18,12 @@ import { UIManager } from './UIManager';
 import { AdBridge } from './AdBridge';
 import { Storage, SaveData } from './Storage';
 import { WxAdapter } from './WxAdapter';
+import { UI_2D, markUi } from './UiPaint';
 
-const { ccclass } = _decorator;
+const { ccclass, executionOrder } = _decorator;
+const orderEarly: ClassDecorator = (typeof executionOrder === 'function'
+    ? executionOrder(-100)
+    : ((ctor: unknown) => ctor)) as ClassDecorator;
 
 interface HistorySnap {
     tubes: number[][];
@@ -21,6 +31,7 @@ interface HistorySnap {
 }
 
 @ccclass('GameManager')
+@orderEarly
 export class GameManager extends Component {
     private _tubes: TubeManager | null = null;
     private _ui: UIManager | null = null;
@@ -43,32 +54,73 @@ export class GameManager extends Component {
 
     onLoad() {
         try {
-            view.setDesignResolutionSize(this.designW, this.designH, ResolutionPolicy.SHOW_ALL);
-            const { board, ui } = this.ensureHierarchy();
-            this.ensureComponents();
-
-            // Wire from nodes we just ensured — do not use find().
-            // find() during onLoad often returns null in Creator browser preview
-            // (director.getScene() not ready), which left uiRoot unset and buildAll() no-op.
-            this._tubes!.setBoardRoot(board);
-            this._ui!.setUIRoot(ui);
-
-            this._tubes!.bind(this);
-            this._ui!.bind(this);
-            this._ads!.setOverlay((sec, title, done) => this._ui!.showAdCountdown(sec, title, done));
-
-            board.setPosition(0, -20, 0);
-            const but = board.getComponent(UITransform) || board.addComponent(UITransform);
-            but.setContentSize(680, 720);
-            board.layer = Layers.Enum.UI_2D;
-            ui.layer = Layers.Enum.UI_2D;
-            ui.setSiblingIndex(100);
-
-            this.freeUndos = this.save.freeUndos ?? 3;
-            this._ui!.buildAll();
-            this._ui!.showCover();
+            this.boot('onLoad', false);
         } catch (err) {
             console.error('[GameManager] onLoad failed', err);
+        }
+    }
+
+    start() {
+        try {
+            if (!this._ui || !this._ui.hasCover()) {
+                console.warn('[GameManager] start(): Play cover missing — rebuilding UI');
+                this.boot('start', true);
+            } else {
+                console.log('[GameManager] start(): Play cover already built');
+            }
+        } catch (err) {
+            console.error('[GameManager] start failed', err);
+        }
+    }
+
+    /**
+     * Wire hierarchy + managers and build the Play cover.
+     * @param allowCreateCanvas only start() should create a Canvas (onLoad often
+     *   sees an empty sibling list and would otherwise nest a duplicate Canvas
+     *   on GameController, leaving the scene Camera staring at an empty UIRoot).
+     */
+    boot(phase: string, allowCreateCanvas: boolean) {
+        const parentName = this.node.parent ? this.node.parent.name : '(null)';
+        const sceneName = this.node.scene ? this.node.scene.name : '(no scene)';
+        console.log(
+            `[GameManager] boot(${phase}) node=${this.node.name} parent=${parentName} scene=${sceneName} allowCreate=${allowCreateCanvas}`,
+        );
+
+        view.setDesignResolutionSize(this.designW, this.designH, ResolutionPolicy.SHOW_ALL);
+
+        const hier = this.ensureHierarchy(allowCreateCanvas);
+        if (!hier) {
+            console.warn(`[GameManager] boot(${phase}) Canvas not ready — waiting for start()`);
+            return;
+        }
+        const { canvas, board, ui } = hier;
+        this.ensureComponents();
+
+        this._tubes!.setBoardRoot(board);
+        this._ui!.setUIRoot(ui);
+        this._tubes!.bind(this);
+        this._ui!.bind(this);
+        this._ads!.setOverlay((sec, title, done) => this._ui!.showAdCountdown(sec, title, done));
+
+        board.setPosition(0, -20, 0);
+        const but = board.getComponent(UITransform) || board.addComponent(UITransform);
+        but.setContentSize(680, 720);
+        markUi(board);
+        markUi(ui);
+        markUi(canvas);
+        ui.setSiblingIndex(100);
+
+        this.freeUndos = this.save.freeUndos ?? 3;
+        this._ui!.buildAll();
+        this._ui!.showCover();
+
+        const ok = this._ui!.hasCover();
+        if (ok) {
+            console.log(
+                `[GameManager] boot(${phase}) SUCCESS cover under ${ui.name} parent=${ui.parent && ui.parent.name}`,
+            );
+        } else {
+            console.error(`[GameManager] boot(${phase}) FAILED — Play cover was not created`);
         }
     }
 
@@ -80,17 +132,23 @@ export class GameManager extends Component {
         this._tubes = this.getComponent(TubeManager) || this.addComponent(TubeManager);
         this._ui = this.getComponent(UIManager) || this.addComponent(UIManager);
         this._ads = this.getComponent(AdBridge) || this.addComponent(AdBridge);
+        if (!this._tubes || !this._ui || !this._ads) {
+            console.error('[GameManager] ensureComponents failed', {
+                tubes: !!this._tubes, ui: !!this._ui, ads: !!this._ads,
+            });
+        }
     }
 
     /**
-     * Resolve Canvas without `find()`. During onLoad, `this.node.parent` / `this.node.scene`
-     * are set even when `director.getScene()` (used by find) is still null.
+     * Resolve Canvas without `find()`. Prefer `this.node.parent` when
+     * GameController is a Canvas child (parent.name === 'Canvas') — that works
+     * even if Scene's sibling list is still empty during onLoad.
      */
     resolveCanvas(): Node | null {
         const named = (root: Node | null | undefined, name: string): Node | null => {
             if (!root) return null;
             if (root.name === name) return root;
-            return root.getChildByName(name);
+            return root.getChildByName ? root.getChildByName(name) : null;
         };
 
         const fromParent = named(this.node.parent, 'Canvas');
@@ -102,7 +160,7 @@ export class GameManager extends Component {
 
         for (let p: Node | null = this.node; p; p = p.parent) {
             if (p.name === 'Canvas') return p;
-            const child = p.getChildByName('Canvas');
+            const child = p.getChildByName ? p.getChildByName('Canvas') : null;
             if (child) return child;
         }
         return null;
@@ -110,23 +168,28 @@ export class GameManager extends Component {
 
     /**
      * Belt-and-suspenders: create Canvas / BoardRoot / UIRoot / ORTHO Camera if missing.
-     * Always returns the live board/ui nodes so onLoad can wire managers without find().
+     * Always returns the live board/ui nodes so boot can wire managers without find().
      */
-    ensureHierarchy(): { canvas: Node; board: Node; ui: Node } {
+    ensureHierarchy(allowCreateCanvas: boolean): { canvas: Node; board: Node; ui: Node } | null {
         let canvas = this.resolveCanvas();
         if (!canvas) {
+            if (!allowCreateCanvas) return null;
+            console.warn('[GameManager] no Canvas in hierarchy — creating one on the scene');
             canvas = new Node('Canvas');
-            canvas.layer = Layers.Enum.UI_2D;
+            markUi(canvas);
             const scene = this.node.scene || director.getScene() || this.node.parent;
-            if (scene) scene.addChild(canvas);
-            else this.node.addChild(canvas);
+            if (scene && scene !== this.node) scene.addChild(canvas);
+            else {
+                console.error('[GameManager] cannot parent Canvas (would nest under GameController)');
+                return null;
+            }
 
             const ut = canvas.addComponent(UITransform);
             ut.setContentSize(this.designW, this.designH);
             const widget = canvas.addComponent(Widget);
             widget.isAlignTop = widget.isAlignBottom = widget.isAlignLeft = widget.isAlignRight = true;
             widget.top = widget.bottom = widget.left = widget.right = 0;
-            widget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
+            if (Widget.AlignMode) widget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
             this.ensureCanvasCamera(canvas);
         } else {
             let w = canvas.getComponent(Widget);
@@ -139,9 +202,18 @@ export class GameManager extends Component {
                 const ut = canvas.addComponent(UITransform);
                 ut.setContentSize(this.designW, this.designH);
             }
-            canvas.layer = Layers.Enum.UI_2D;
+            markUi(canvas);
             this.ensureCanvasCamera(canvas);
         }
+
+        if (this.node.parent !== canvas) {
+            console.log(`[GameManager] reparent ${this.node.name} → Canvas (was ${this.node.parent ? this.node.parent.name : 'null'})`);
+            this.node.parent = canvas;
+        }
+        this.node.name = 'GameController';
+        markUi(this.node);
+        const selfUt = this.node.getComponent(UITransform);
+        if (selfUt) selfUt.setContentSize(1, 1);
 
         const ensureChild = (name: string, sibling: number, sizeW: number, sizeH: number) => {
             let n = canvas!.getChildByName(name);
@@ -149,19 +221,15 @@ export class GameManager extends Component {
                 n = new Node(name);
                 n.addComponent(UITransform).setContentSize(sizeW, sizeH);
                 canvas!.addChild(n);
+                console.log(`[GameManager] created missing child ${name}`);
             }
-            n.layer = Layers.Enum.UI_2D;
+            markUi(n);
             n.setSiblingIndex(sibling);
             return n;
         };
 
         const board = ensureChild('BoardRoot', 2, 680, 720);
         const ui = ensureChild('UIRoot', 10, this.designW, this.designH);
-
-        if (this.node.parent && this.node.name !== 'GameController') {
-            this.node.name = 'GameController';
-        }
-        this.node.layer = Layers.Enum.UI_2D;
         this.ensureCanvasCamera(canvas);
         return { canvas, board, ui };
     }
@@ -173,26 +241,26 @@ export class GameManager extends Component {
         let camNode = canvas.getChildByName('Camera');
         if (!camNode) {
             camNode = new Node('Camera');
-            camNode.layer = Layers.Enum.UI_2D;
+            markUi(camNode);
             canvas.insertChild(camNode, 0);
             camNode.setPosition(0, 0, 1000);
+            console.log('[GameManager] created Camera under Canvas');
         } else {
             camNode.setSiblingIndex(0);
             if (camNode.position.z === 0) camNode.setPosition(0, 0, 1000);
         }
-        camNode.layer = Layers.Enum.UI_2D;
+        markUi(camNode);
 
         let camera = camNode.getComponent(Camera);
         if (!camera) camera = camNode.addComponent(Camera);
 
-        // Cocos 3.8: ProjectionType.ORTHO = 0; SOLID_COLOR clears color+depth+stencil
         camera.projection = Camera.ProjectionType.ORTHO;
-        camera.orthoHeight = this.designH / 2; // 640 for 1280 design height
+        camera.orthoHeight = this.designH / 2;
         camera.near = 1;
         camera.far = 2000;
         camera.clearFlags = Camera.ClearFlag.SOLID_COLOR;
         camera.clearColor = new Color(0xff, 0xf5, 0xfb, 255);
-        camera.visibility = Layers.Enum.UI_2D;
+        camera.visibility = UI_2D;
         camera.priority = 0;
 
         let canvasComp = canvas.getComponent(Canvas);
@@ -202,6 +270,8 @@ export class GameManager extends Component {
     }
 
     onStartPressed() {
+        if (this._ui && !this._ui.isCoverVisible()) return;
+        console.log('[GameManager] Play pressed');
         this._ui?.hideCover();
         this.loadLevel(Math.min(this.save.highest, TOTAL_LEVELS));
     }
@@ -322,7 +392,6 @@ export class GameManager extends Component {
     }
 
     onHint() {
-        // Rewarded stub for Hint (wx.createRewardedVideoAd)
         this._ads?.showRewarded('hint', () => {
             const h = LevelManager.findHint(this.tubes, this.capacity);
             if (!h) {
