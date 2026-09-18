@@ -8,19 +8,22 @@ HTML 原型（仓库根目录 `index.html`）仅作玩法与关卡设计参考�
 
 ## English (short)
 
-Open this `cocos/` folder in **Cocos Creator 3.8.8** → `assets/scenes/main.scene` → Preview. All UI and tubes are built in code (Graphics + Label + Button + Widget); no prefabs or art required. Switch build platform to **微信小游戏**, replace `adUnitId` placeholders in `assets/scripts/AdBridge.ts`, then build. The root `index.html` is a design reference only.
+Re-open this `cocos/` folder in **Cocos Creator 3.8.8** → open `assets/scenes/main.scene`. Console should not show `[Scene] Missing class` on `GameController`. ▶ Preview should show the start UI (Play cover). All UI and tubes are built in code (Graphics + Label + Button + Widget); no prefabs or art required. Switch build platform to **微信小游戏**, replace `adUnitId` placeholders in `assets/scripts/AdBridge.ts`, then build. The root `index.html` is a design reference only.
 
 ---
 
 ## 打开并预览
 
 1. 安装 **Cocos Creator 3.8.8**（兼容 3.8.x）
-2. 启动 Creator，**打开项目**，选择本目录：`cocos/`（含 `assets/` + `package.json`）
+2. 启动 Creator，**重新打开**本目录：`cocos/`（含 `assets/` + `package.json`）
 3. 资源管理器打开 `assets/scenes/main.scene`
-4. 点击编辑器 **预览 / Play（浏览器）**
-5. 封面点 **Play** → 点试管 A 再点试管 B 倒水
+4. 控制台不应再出现 `[Scene] Missing class`，也不应提示 `GameController` 上脚本 missing / invalid
+5. 点击编辑器 **▶ 预览 / Play（浏览器）**，应看到开局封面 UI（Play）
+6. 封面点 **Play** → 点试管 A 再点试管 B 倒水
 
-> 若场景节点不完整，`GameManager.onLoad` 会自动补齐 `Canvas` / `Camera`（正交 UI）/ `BoardRoot` / `UIRoot`，避免预览黑屏。
+> `GameController` 场景里只挂 `cc.UITransform` + `GameManager`。`TubeManager` / `UIManager` / `AdBridge` 由 `GameManager.ensureComponents()` 在 `onLoad` 动态 `addComponent`。
+>
+> 若场景节点不完整，`GameManager.onLoad` 还会自动补齐 `Canvas` / `Camera`（正交 UI）/ `BoardRoot` / `UIRoot`，避免预览黑屏。
 
 设计分辨率 **720×1280** 竖屏。无需 npm，无需外部字体/图集。
 
@@ -42,7 +45,7 @@ Open this `cocos/` folder in **Cocos Creator 3.8.8** → `assets/scenes/main.sce
 ```
 cocos/
 ├── assets/
-│   ├── scenes/main.scene     # Canvas + ORTHO Camera + GameController
+│   ├── scenes/main.scene     # Canvas + ORTHO Camera + GameController (GameManager only)
 │   └── scripts/
 │       ├── GameManager.ts    # 流程、过关、道具
 │       ├── TubeManager.ts    # 试管绘制与点击
@@ -91,4 +94,5 @@ cocos/
 
 - 首次打开会生成 `library/`、`temp/`、`local/`、`profiles/`，已写入 `.gitignore`
 - 项目设置**没有**再声明名为 `DEFAULT` 的自定义层，避免与引擎内置层冲突
+- 自定义脚本在场景里的 `__type__` 必须是 Creator 的 **23 位压缩 CID**（由 `.ts.meta` 的 UUID 压缩而来），不能写带连字符的完整 UUID，否则会出现 `[Scene] Missing class`
 - 根目录 `index.html` / `playtest-solver.mjs` 保留，作为设计参考与可解性校验
