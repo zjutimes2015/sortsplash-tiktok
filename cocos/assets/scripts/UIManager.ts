@@ -11,6 +11,19 @@ import type { GameManager } from './GameManager';
 
 const { ccclass } = _decorator;
 
+/** Creator 3.8: prefer system font so Labels render without a bundled TTF. */
+function applySystemFont(lab: Label) {
+    const anyLab = lab as Label & {
+        useSystemFont?: boolean;
+        fontFamily?: string;
+        cacheMode?: number;
+    };
+    if ('useSystemFont' in anyLab) anyLab.useSystemFont = true;
+    if ('fontFamily' in anyLab) anyLab.fontFamily = anyLab.fontFamily || 'Arial';
+    const modes = (Label as typeof Label & { CacheMode?: { NONE: number } }).CacheMode;
+    if (modes && 'cacheMode' in anyLab) anyLab.cacheMode = modes.NONE;
+}
+
 @ccclass('UIManager')
 export class UIManager extends Component {
     uiRoot: Node | null = null;
@@ -50,7 +63,10 @@ export class UIManager extends Component {
     }
 
     buildAll() {
-        if (!this.uiRoot) return;
+        if (!this.uiRoot) {
+            console.error('[UIManager] buildAll skipped: uiRoot is null');
+            return;
+        }
         this._buildBackground();
         this._buildHUD();
         this._buildToolbar();
@@ -148,6 +164,7 @@ export class UIManager extends Component {
         lab.horizontalAlign = Label.HorizontalAlign.CENTER;
         lab.verticalAlign = Label.VerticalAlign.CENTER;
         lab.color = new Color(42, 32, 64, 255);
+        applySystemFont(lab);
         return { node: n, label: lab };
     }
 
@@ -396,6 +413,7 @@ export class UIManager extends Component {
             lab.horizontalAlign = Label.HorizontalAlign.CENTER;
             lab.verticalAlign = Label.VerticalAlign.CENTER;
             lab.color = unlocked ? Color.WHITE : new Color(122, 111, 138, 255);
+            applySystemFont(lab);
             if (unlocked) {
                 const lv = i;
                 const btn = n.addComponent(Button);
@@ -584,6 +602,7 @@ export class UIManager extends Component {
         lab.verticalAlign = Label.VerticalAlign.CENTER;
         lab.color = color;
         lab.overflow = Label.Overflow.SHRINK;
+        applySystemFont(lab);
         return { node: n, label: lab };
     }
 
@@ -614,6 +633,7 @@ export class UIManager extends Component {
         lab.verticalAlign = Label.VerticalAlign.CENTER;
         lab.color = textColor || Color.WHITE;
         lab.overflow = Label.Overflow.SHRINK;
+        applySystemFont(lab);
         const btn = n.addComponent(Button);
         btn.transition = Button.Transition.SCALE;
         btn.zoomScale = 0.94;

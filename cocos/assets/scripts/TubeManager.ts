@@ -11,6 +11,18 @@ import type { GameManager } from './GameManager';
 
 const { ccclass } = _decorator;
 
+function applySystemFont(lab: Label) {
+    const anyLab = lab as Label & {
+        useSystemFont?: boolean;
+        fontFamily?: string;
+        cacheMode?: number;
+    };
+    if ('useSystemFont' in anyLab) anyLab.useSystemFont = true;
+    if ('fontFamily' in anyLab) anyLab.fontFamily = anyLab.fontFamily || 'Arial';
+    const modes = (Label as typeof Label & { CacheMode?: { NONE: number } }).CacheMode;
+    if (modes && 'cacheMode' in anyLab) anyLab.cacheMode = modes.NONE;
+}
+
 function hexColor(hex: string): Color {
     const h = hex.replace('#', '');
     return new Color(
@@ -155,6 +167,7 @@ export class TubeManager extends Component {
         lab.horizontalAlign = Label.HorizontalAlign.CENTER;
         lab.verticalAlign = Label.VerticalAlign.CENTER;
         lab.color = new Color(122, 111, 138, 255);
+        applySystemFont(lab);
         wrap.addChild(labN);
 
         wrap.on(Node.EventType.TOUCH_END, (e: any) => {
