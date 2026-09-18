@@ -76,7 +76,7 @@ Placements:
 
 ## Cocos Creator 3.8 (WeChat Mini Game)
 
-Production path is **`cocos/`** — open that folder in **Cocos Creator 3.8.8**, preview `assets/scenes/main.scene`, then build platform **微信小游戏**. See [`cocos/README.md`](cocos/README.md) and [`cocos/WECHAT.md`](cocos/WECHAT.md).
+Production path is **`cocos/`** — re-open that folder in **Cocos Creator 3.8.8**, open `assets/scenes/main.scene` (console should not show Missing class on `GameController`), ▶ preview the start UI, then build platform **微信小游戏**. See [`cocos/README.md`](cocos/README.md) and [`cocos/WECHAT.md`](cocos/WECHAT.md).
 
 This `index.html` is a **playable design reference only** (levels, pour rules, HUD). Do not upload the HTML as a Mini Game package.
 

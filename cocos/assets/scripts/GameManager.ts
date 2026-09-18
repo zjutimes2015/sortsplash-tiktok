@@ -44,19 +44,16 @@ export class GameManager extends Component {
     onLoad() {
         view.setDesignResolutionSize(this.designW, this.designH, ResolutionPolicy.SHOW_ALL);
         this.ensureHierarchy();
-
-        this._tubes = this.getComponent(TubeManager) || this.addComponent(TubeManager);
-        this._ui = this.getComponent(UIManager) || this.addComponent(UIManager);
-        this._ads = this.getComponent(AdBridge) || this.addComponent(AdBridge);
+        this.ensureComponents();
 
         const board = find('Canvas/BoardRoot');
         const ui = find('Canvas/UIRoot');
-        if (board) this._tubes.setBoardRoot(board);
-        if (ui) this._ui.setUIRoot(ui);
+        if (board) this._tubes!.setBoardRoot(board);
+        if (ui) this._ui!.setUIRoot(ui);
 
-        this._tubes.bind(this);
-        this._ui.bind(this);
-        this._ads.setOverlay((sec, title, done) => this._ui!.showAdCountdown(sec, title, done));
+        this._tubes!.bind(this);
+        this._ui!.bind(this);
+        this._ads!.setOverlay((sec, title, done) => this._ui!.showAdCountdown(sec, title, done));
 
         if (board) {
             board.setPosition(0, -20, 0);
@@ -66,8 +63,18 @@ export class GameManager extends Component {
         if (ui) ui.setSiblingIndex(100);
 
         this.freeUndos = this.save.freeUndos ?? 3;
-        this._ui.buildAll();
-        this._ui.showCover();
+        this._ui!.buildAll();
+        this._ui!.showCover();
+    }
+
+    /**
+     * Scene only mounts GameManager. Attach sibling gameplay scripts at runtime
+     * so Creator never has to deserialize TubeManager / UIManager / AdBridge from the scene.
+     */
+    ensureComponents() {
+        this._tubes = this.getComponent(TubeManager) || this.addComponent(TubeManager);
+        this._ui = this.getComponent(UIManager) || this.addComponent(UIManager);
+        this._ads = this.getComponent(AdBridge) || this.addComponent(AdBridge);
     }
 
     /**
