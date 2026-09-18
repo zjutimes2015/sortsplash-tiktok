@@ -23,7 +23,7 @@ Re-open this `cocos/` folder in **Cocos Creator 3.8.8** → open `assets/scenes/
 
 > `GameController` 场景里只挂 `cc.UITransform` + `GameManager`。`TubeManager` / `UIManager` / `AdBridge` 由 `GameManager.ensureComponents()` 在 `onLoad` 动态 `addComponent`。
 >
-> 若场景节点不完整，`GameManager.onLoad` 还会自动补齐 `Canvas` / `Camera`（正交 UI）/ `BoardRoot` / `UIRoot`，避免预览黑屏。
+> 若场景节点不完整，`GameManager.onLoad` 还会自动补齐 `Canvas` / `Camera`（正交 UI）/ `BoardRoot` / `UIRoot`。根节点通过 `ensureHierarchy()` 的返回值（`getChildByName`）绑定，**不要**依赖 `find()`，否则 Creator 浏览器预览里 `uiRoot` 为空、`buildAll()` 直接返回，画面只剩清屏色。
 
 设计分辨率 **720×1280** 竖屏。无需 npm，无需外部字体/图集。
 

@@ -65,10 +65,14 @@ declare module 'cc' {
         horizontalAlign: number;
         verticalAlign: number;
         overflow: number;
+        useSystemFont: boolean;
+        fontFamily: string;
+        cacheMode: number;
         node: Node;
         static HorizontalAlign: { LEFT: number; CENTER: number; RIGHT: number };
         static VerticalAlign: { TOP: number; CENTER: number; BOTTOM: number };
         static Overflow: { NONE: number; CLAMP: number; SHRINK: number; RESIZE_HEIGHT: number };
+        static CacheMode: { NONE: number; BITMAP: number; CHAR: number };
     }
     export class Button extends Component {
         transition: number;

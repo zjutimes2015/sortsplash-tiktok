@@ -4,7 +4,7 @@
  */
 import {
     _decorator, Component, Node, UITransform, Widget, Canvas, Camera,
-    director, view, ResolutionPolicy, Layers, find, Color,
+    director, view, ResolutionPolicy, Layers, Color,
 } from 'cc';
 import { LevelManager, TOTAL_LEVELS, CAP } from './LevelManager';
 import { TubeManager } from './TubeManager';
@@ -42,29 +42,34 @@ export class GameManager extends Component {
     designH = 1280;
 
     onLoad() {
-        view.setDesignResolutionSize(this.designW, this.designH, ResolutionPolicy.SHOW_ALL);
-        this.ensureHierarchy();
-        this.ensureComponents();
+        try {
+            view.setDesignResolutionSize(this.designW, this.designH, ResolutionPolicy.SHOW_ALL);
+            const { board, ui } = this.ensureHierarchy();
+            this.ensureComponents();
 
-        const board = find('Canvas/BoardRoot');
-        const ui = find('Canvas/UIRoot');
-        if (board) this._tubes!.setBoardRoot(board);
-        if (ui) this._ui!.setUIRoot(ui);
+            // Wire from nodes we just ensured — do not use find().
+            // find() during onLoad often returns null in Creator browser preview
+            // (director.getScene() not ready), which left uiRoot unset and buildAll() no-op.
+            this._tubes!.setBoardRoot(board);
+            this._ui!.setUIRoot(ui);
 
-        this._tubes!.bind(this);
-        this._ui!.bind(this);
-        this._ads!.setOverlay((sec, title, done) => this._ui!.showAdCountdown(sec, title, done));
+            this._tubes!.bind(this);
+            this._ui!.bind(this);
+            this._ads!.setOverlay((sec, title, done) => this._ui!.showAdCountdown(sec, title, done));
 
-        if (board) {
             board.setPosition(0, -20, 0);
             const but = board.getComponent(UITransform) || board.addComponent(UITransform);
             but.setContentSize(680, 720);
-        }
-        if (ui) ui.setSiblingIndex(100);
+            board.layer = Layers.Enum.UI_2D;
+            ui.layer = Layers.Enum.UI_2D;
+            ui.setSiblingIndex(100);
 
-        this.freeUndos = this.save.freeUndos ?? 3;
-        this._ui!.buildAll();
-        this._ui!.showCover();
+            this.freeUndos = this.save.freeUndos ?? 3;
+            this._ui!.buildAll();
+            this._ui!.showCover();
+        } catch (err) {
+            console.error('[GameManager] onLoad failed', err);
+        }
     }
 
     /**
@@ -78,14 +83,41 @@ export class GameManager extends Component {
     }
 
     /**
-     * Belt-and-suspenders: create Canvas / BoardRoot / UIRoot / ORTHO Camera if missing.
+     * Resolve Canvas without `find()`. During onLoad, `this.node.parent` / `this.node.scene`
+     * are set even when `director.getScene()` (used by find) is still null.
      */
-    ensureHierarchy() {
-        let canvas = find('Canvas');
+    resolveCanvas(): Node | null {
+        const named = (root: Node | null | undefined, name: string): Node | null => {
+            if (!root) return null;
+            if (root.name === name) return root;
+            return root.getChildByName(name);
+        };
+
+        const fromParent = named(this.node.parent, 'Canvas');
+        if (fromParent) return fromParent;
+
+        const scene = this.node.scene || director.getScene();
+        const fromScene = named(scene, 'Canvas');
+        if (fromScene) return fromScene;
+
+        for (let p: Node | null = this.node; p; p = p.parent) {
+            if (p.name === 'Canvas') return p;
+            const child = p.getChildByName('Canvas');
+            if (child) return child;
+        }
+        return null;
+    }
+
+    /**
+     * Belt-and-suspenders: create Canvas / BoardRoot / UIRoot / ORTHO Camera if missing.
+     * Always returns the live board/ui nodes so onLoad can wire managers without find().
+     */
+    ensureHierarchy(): { canvas: Node; board: Node; ui: Node } {
+        let canvas = this.resolveCanvas();
         if (!canvas) {
             canvas = new Node('Canvas');
             canvas.layer = Layers.Enum.UI_2D;
-            const scene = director.getScene();
+            const scene = this.node.scene || director.getScene() || this.node.parent;
             if (scene) scene.addChild(canvas);
             else this.node.addChild(canvas);
 
@@ -115,24 +147,23 @@ export class GameManager extends Component {
             let n = canvas!.getChildByName(name);
             if (!n) {
                 n = new Node(name);
-                n.layer = Layers.Enum.UI_2D;
                 n.addComponent(UITransform).setContentSize(sizeW, sizeH);
                 canvas!.addChild(n);
             }
+            n.layer = Layers.Enum.UI_2D;
             n.setSiblingIndex(sibling);
             return n;
         };
 
         const board = ensureChild('BoardRoot', 2, 680, 720);
         const ui = ensureChild('UIRoot', 10, this.designW, this.designH);
-        void board;
-        void ui;
 
         if (this.node.parent && this.node.name !== 'GameController') {
             this.node.name = 'GameController';
         }
-        this.ensureCanvasCamera(canvas!);
-        return { canvas };
+        this.node.layer = Layers.Enum.UI_2D;
+        this.ensureCanvasCamera(canvas);
+        return { canvas, board, ui };
     }
 
     /**
@@ -149,6 +180,7 @@ export class GameManager extends Component {
             camNode.setSiblingIndex(0);
             if (camNode.position.z === 0) camNode.setPosition(0, 0, 1000);
         }
+        camNode.layer = Layers.Enum.UI_2D;
 
         let camera = camNode.getComponent(Camera);
         if (!camera) camera = camNode.addComponent(Camera);
