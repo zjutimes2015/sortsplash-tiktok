@@ -76,7 +76,7 @@ Placements:
 
 ## Cocos Creator 3.8 (WeChat Mini Game)
 
-Production path is **`cocos/`** — re-open that folder in **Cocos Creator 3.8.8**, open `assets/scenes/main.scene` (`GameController` under **Canvas**). ▶ Preview should show the SortSplash **Play** cover. Then build platform **微信小游戏** and **re-import** the new `cocos/build/wechatgame` in WeChat DevTools (overwrite any old copy such as `E:\GROK\SortSplash-WeChat\build\wechatgame`). See [`cocos/README.md`](cocos/README.md) and [`cocos/WECHAT.md`](cocos/WECHAT.md).
+Production path is **`cocos/`** — re-open that folder in **Cocos Creator 3.8.8**, open `assets/scenes/main.scene` (`GameController` under **Canvas**). ▶ Preview should show the **颜色分拣 / 开始游戏** cover (Simplified Chinese, KaiTi system font). Then build platform **微信小游戏** and **re-import** the new `cocos/build/wechatgame` in WeChat DevTools (overwrite any old copy such as `E:\GROK\SortSplash-WeChat\build\wechatgame`). See [`cocos/README.md`](cocos/README.md) and [`cocos/WECHAT.md`](cocos/WECHAT.md).
 
 This `index.html` is a **playable design reference only** (levels, pour rules, HUD). Do not upload the HTML as a Mini Game package.
 
@@ -95,7 +95,7 @@ sortsplash-tiktok/
 
 ## 中文简述
 
-**SortSplash**（颜色倒水 / 试管排序）超休闲原型：打开 `index.html` 即可玩。适合海外 TikTok 益智短时循环，带激励视频广告桩（+1 试管、Undo 包）。
+**颜色分拣**（SortSplash / 试管倒水）超休闲原型：打开 `index.html` 即可玩。玩家界面为简体中文，Label 优先楷体。带激励视频广告桩（+1 试管、撤销包）。
 
 **重要：** HTML 不能作为小游戏上架包。量产请用 **`cocos/` + Cocos Creator 3.8.8** 打开并构建 **微信小游戏**，再把新的 `cocos/build/wechatgame` **重新导入**微信开发者工具（旧目录例如 `E:\GROK\SortSplash-WeChat\build\wechatgame` 必须整包覆盖）。清单见 `cocos/WECHAT.md`。根目录 HTML 仍作玩法/关卡参考。微信广告：`wx.createRewardedVideoAd`（`AdBridge.ts`）。
 

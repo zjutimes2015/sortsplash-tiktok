@@ -9,6 +9,7 @@ import {
 import { COLORS } from './LevelManager';
 import type { GameManager } from './GameManager';
 import { ensureUt, makeColorNode, makeLabel, markUi } from './UiPaint';
+import { Copy } from './Copy';
 
 const { ccclass } = _decorator;
 
@@ -111,7 +112,7 @@ export class TubeManager extends Component {
             wrap.addChild(makeColorNode('L' + L, color, w - 8, layerH - 2, 0, ly));
         }
 
-        const lab = makeLabel('EmptyLab', tube.length ? '' : 'empty', 14, new Color(122, 111, 138, 255), 0, -h / 2 - 4, w);
+        const lab = makeLabel('EmptyLab', tube.length ? '' : Copy.emptyTube, 14, new Color(122, 111, 138, 255), 0, -h / 2 - 4, w);
         wrap.addChild(lab.node);
 
         wrap.on(Node.EventType.TOUCH_END, (e: any) => {

@@ -19,6 +19,7 @@ import { AdBridge } from './AdBridge';
 import { Storage, SaveData } from './Storage';
 import { WxAdapter } from './WxAdapter';
 import { UI_2D, markUi, stretchToParent } from './UiPaint';
+import { Copy } from './Copy';
 
 const { ccclass, executionOrder } = _decorator;
 const orderEarly: ClassDecorator = (typeof executionOrder === 'function'
@@ -295,7 +296,7 @@ export class GameManager extends Component {
         this.pouring = false;
         this.hintTarget = -1;
         this._ui?.hideWin();
-        this._ui?.setHint(this.level <= 2 ? 'Tip: pour matching colors into the same tube' : '');
+        this._ui?.setHint(this.level <= 2 ? Copy.tipMatch : '');
         this._refresh();
     }
 
@@ -303,7 +304,7 @@ export class GameManager extends Component {
         if (this.pouring) return;
         if (this.selected < 0) {
             if (!this.tubes[idx] || !this.tubes[idx].length) {
-                this._ui?.showToast('Pick a tube with color');
+                this._ui?.showToast(Copy.pickColored);
                 return;
             }
             this.selected = idx;
@@ -322,7 +323,7 @@ export class GameManager extends Component {
         const amt = LevelManager.pourAmount(this.tubes[from], this.tubes[to], this.capacity);
         if (!amt) {
             this._tubes?.shake(to);
-            this._ui?.showToast("Can't pour there");
+            this._ui?.showToast(Copy.cantPour);
             this.selected = -1;
             this._refresh();
             return;
@@ -354,8 +355,8 @@ export class GameManager extends Component {
             this.save.freeUndos = this.freeUndos;
             Storage.save(this.save);
         }
-        const msg = `Level ${this.level} done in ${this.moves} moves!`
-            + (this.level < TOTAL_LEVELS ? '' : ' You finished all levels! 🏆');
+        const msg = Copy.winMoves(this.level, this.moves)
+            + (this.level < TOTAL_LEVELS ? '' : ` ${Copy.winAll}`);
         this._ui?.showWin(msg);
         this._refresh();
     }
@@ -363,7 +364,7 @@ export class GameManager extends Component {
     onNextLevel() {
         this._ui?.hideWin();
         if (this.level >= TOTAL_LEVELS) {
-            this._ui?.showToast('All levels cleared! 🏆');
+            this._ui?.showToast(Copy.winAll);
             return;
         }
         const next = this.level + 1;
@@ -377,13 +378,13 @@ export class GameManager extends Component {
 
     onRestart() {
         this.loadLevel(this.level);
-        this._ui?.showToast('Level restarted');
+        this._ui?.showToast(Copy.restarted);
     }
 
     onUndo() {
         if (!this.history.length) return;
         if (this.freeUndos <= 0) {
-            this._ui?.showToast('No free undos — watch an ad for Undo Pack');
+            this._ui?.showToast(Copy.noFreeUndos);
             return;
         }
         const snap = this.history.pop();
@@ -402,12 +403,12 @@ export class GameManager extends Component {
         this._ads?.showRewarded('hint', () => {
             const h = LevelManager.findHint(this.tubes, this.capacity);
             if (!h) {
-                this._ui?.showToast('No move found — try Undo or +1 Tube');
+                this._ui?.showToast(Copy.noHint);
                 return;
             }
             this.selected = h.i;
             this.hintTarget = h.j;
-            this._ui?.setHint(`Hint: pour tube ${h.i + 1} → tube ${h.j + 1}`);
+            this._ui?.setHint(Copy.hintPour(h.i + 1, h.j + 1));
             this._refresh();
             this.scheduleOnce(() => {
                 this.hintTarget = -1;
@@ -415,13 +416,13 @@ export class GameManager extends Component {
                 this._refresh();
             }, 4);
         }, () => {
-            this._ui?.showToast('Ad not finished');
+            this._ui?.showToast(Copy.adNotFinished);
         });
     }
 
     onAddTube() {
         if (this.bonusTubeUsed) {
-            this._ui?.showToast('Already used +1 Tube this level');
+            this._ui?.showToast(Copy.tubeAlready);
             return;
         }
         this._ads?.showRewarded('tube', () => {
@@ -429,9 +430,9 @@ export class GameManager extends Component {
             this.bonusTubeUsed = true;
             this.selected = -1;
             this._refresh();
-            this._ui?.showToast('+1 empty tube added! 🧪');
+            this._ui?.showToast(Copy.tubeAdded);
         }, () => {
-            this._ui?.showToast('Ad not finished');
+            this._ui?.showToast(Copy.adNotFinished);
         });
     }
 
@@ -441,16 +442,16 @@ export class GameManager extends Component {
             this.save.freeUndos = this.freeUndos;
             Storage.save(this.save);
             this._refresh();
-            this._ui?.showToast('+5 undos unlocked!');
+            this._ui?.showToast(Copy.undoPackGot);
         }, () => {
-            this._ui?.showToast('Ad not finished');
+            this._ui?.showToast(Copy.adNotFinished);
         });
     }
 
     onShare() {
-        const text = `I cleared Level ${Math.max(1, this.save.highest - 1)} on SortSplash! 🧪✨ Sort colors. One more pour.`;
+        const text = Copy.shareText(Math.max(1, this.save.highest - 1));
         WxAdapter.shareAppMessage({ title: text });
-        this._ui?.showToast(WxAdapter.isWeChat() ? 'Share sheet opened' : 'Copied challenge text!');
+        this._ui?.showToast(WxAdapter.isWeChat() ? Copy.shareOpened : Copy.shareCopied);
     }
 
     onOpenLevels() {

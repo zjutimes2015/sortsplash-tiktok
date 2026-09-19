@@ -1,6 +1,6 @@
 # SortSplash（Cocos Creator 3.8）
 
-**Sort colors. One more pour.** 颜色倒水 / Water Sort，面向 **微信小游戏** 导出。
+**倒水归类，再来一关。** 颜色倒水 / Water Sort，面向 **微信小游戏** 导出。玩家 UI 为简体中文，Label 优先楷体系统字体。
 
 HTML 原型（仓库根目录 `index.html`）仅作玩法与关卡设计参考，**不要**当微信/Native 上架包。量产请打开本目录的 Cocos 工程。
 
@@ -8,7 +8,7 @@ HTML 原型（仓库根目录 `index.html`）仅作玩法与关卡设计参考�
 
 ## English (short)
 
-Re-open this `cocos/` folder in **Cocos Creator 3.8.8** → open `assets/scenes/main.scene`. Hierarchy: `Scene → Canvas → GameController` (GameManager only). Console should not show `[Scene] Missing class`. ▶ Preview and WeChat simulator should show a **huge bright-pink PLAY** button (Widget-stretched cover; `start()` rebuilds if `onLoad` raced). Switch build platform to **微信小游戏**, replace `adUnitId` placeholders in `assets/scripts/AdBridge.ts`, then **rebuild and re-import** `build/wechatgame`. The root `index.html` is a design reference only.
+Re-open this `cocos/` folder in **Cocos Creator 3.8.8** → open `assets/scenes/main.scene`. Hierarchy: `Scene → Canvas → GameController` (GameManager only). Console should not show `[Scene] Missing class`. ▶ Preview and WeChat simulator should show a **huge bright-pink 开始游戏 (Play)** button (Widget-stretched cover; ZH UI + KaiTi; `start()` rebuilds if `onLoad` raced). Switch build platform to **微信小游戏**, replace `adUnitId` placeholders in `assets/scripts/AdBridge.ts`, then **rebuild and re-import** `build/wechatgame`. The root `index.html` is a design reference only.
 
 ---
 
@@ -18,8 +18,8 @@ Re-open this `cocos/` folder in **Cocos Creator 3.8.8** → open `assets/scenes/
 2. 启动 Creator，**重新打开**本目录：`cocos/`（含 `assets/` + `package.json`）
 3. 资源管理器打开 `assets/scenes/main.scene`，层级为 `Scene → Canvas → Camera / BoardRoot / UIRoot / GameController`
 4. 控制台不应再出现 `[Scene] Missing class`，也不应提示 `GameController` 上脚本 missing / invalid
-5. 点击编辑器 **▶ 预览 / Play（浏览器）**，应看到 **SortSplash 封面 + ▶ Play**（不是空白清屏）
-6. 控制台有 `[GameManager] boot(onLoad|start) SUCCESS`；封面点 **Play** → 点试管 A 再点试管 B 倒水
+5. 点击编辑器 **▶ 预览 / Play（浏览器）**，应看到 **「颜色分拣」封面 + 超大亮粉 ▶ 开始游戏**（不是空白清屏）
+6. 控制台有 `[GameManager] boot(onLoad|start) SUCCESS`；封面点 **开始游戏** → 点试管 A 再点试管 B 倒水
 
 > `GameController` **必须在 Canvas 下**（不要挂成 Scene 的兄弟节点）。场景里只挂 `cc.UITransform`（1×1）+ `GameManager`（压缩 CID，与 `GameManager.ts.meta` 的 UUID 对应）。`TubeManager` / `UIManager` / `AdBridge` 由 `ensureComponents()` 运行时 `addComponent`。
 >
@@ -38,7 +38,7 @@ Re-open this `cocos/` folder in **Cocos Creator 3.8.8** → open `assets/scenes/
 - **48 关**：1–5 手搓教学关，其后为与 HTML 相同种子的洗牌关（颜色 3→10）
 - 道具：Undo（免费次数）、Undo Pack（激励视频桩）、+1 Tube（每关一次，激励桩）、Hint（激励桩）、Restart、选关
 - 软失败：无 Game Over，可重开 / 看广告加管
-- 英文 UI
+- 简体中文 UI；Label 使用系统字体，优先楷体（`KaiTi, STKaiti, 楷体, DFKai-SB, serif`）
 
 ---
 
@@ -53,6 +53,7 @@ cocos/
 │       ├── TubeManager.ts    # 试管绘制与点击
 │       ├── LevelManager.ts   # 48 关生成与倾倒规则
 │       ├── UIManager.ts      # 封面 / HUD / 弹窗 / Toast / 彩带
+│       ├── Copy.ts           # 简体中文玩家文案 + 楷体 fontFamily
 │       ├── UiPaint.ts        # Graphics + 烘焙色 Sprite + █ 色块（微信可见）
 │       ├── AdBridge.ts       # wx.createRewardedVideoAd 桩 + 倒计时回退
 │       ├── WxAdapter.ts      # wx / 安全存储（不碰抛错的 localStorage）
@@ -79,7 +80,7 @@ cocos/
 | `rewardedHint` | Hint | 同上 |
 | `interstitial` | 关卡之间插屏（可选） | `adunit-YOUR_INTERSTITIAL_ID` |
 
-浏览器预览没有 `wx` 时，激励视频会走 **3 秒 “Ad playing…”** 倒计时桩。
+浏览器预览没有 `wx` 时，激励视频会走 **3 秒「广告播放中…」** 倒计时桩。
 
 存储：`Storage` 在浏览器用 `localStorage`（经 `WxAdapter.browserStorage` 安全读取），微信环境只用 `wx.setStorageSync` / `wx.getStorageSync`。**有 `wx` 时绝不碰 `window.localStorage`**（该 getter 会抛错，DevTools 黑屏）。缺失的 `wx.*` 不会中断 `boot()`。
 
