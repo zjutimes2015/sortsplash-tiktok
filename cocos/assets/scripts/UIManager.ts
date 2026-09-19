@@ -13,6 +13,7 @@ import {
     markUi, ensureUt, makeLabel, makeColorNode,
     makeButton, makeOverlay, makePlayButton, stretchToParent, logNodeRect,
 } from './UiPaint';
+import { Copy } from './Copy';
 
 const { ccclass } = _decorator;
 
@@ -147,14 +148,14 @@ export class UIManager extends Component {
         hud.setPosition(0, this.designH / 2 - 56, 0);
         this.uiRoot.addChild(hud);
 
-        hud.addChild(makeLabel('Brand', 'SortSplash', 28, new Color(255, 107, 181, 255), -200, 10, 280).node);
-        hud.addChild(makeLabel('Tag', 'Sort colors. One more pour.', 14, new Color(122, 111, 138, 255), -200, -16, 280).node);
+        hud.addChild(makeLabel('Brand', Copy.title, 28, new Color(255, 107, 181, 255), -200, 10, 280).node);
+        hud.addChild(makeLabel('Tag', Copy.tagline, 14, new Color(122, 111, 138, 255), -200, -16, 280).node);
 
-        const lv = this._makePill('LvPill', 'Lv 1', 200, 8);
+        const lv = this._makePill('LvPill', Copy.levelPill(1), 178, 8);
         this._levelLabel = lv.label;
         hud.addChild(lv.node);
 
-        const mv = this._makePill('MvPill', 'Moves 0', 310, 8);
+        const mv = this._makePill('MvPill', Copy.movesPill(0), 306, 8);
         this._movesLabel = mv.label;
         hud.addChild(mv.node);
 
@@ -163,10 +164,10 @@ export class UIManager extends Component {
 
     private _makePill(name: string, text: string, x: number, y: number) {
         const n = new Node(name);
-        ensureUt(n, 110, 36);
+        ensureUt(n, 124, 36);
         n.setPosition(x, y, 0);
-        n.addChild(makeColorNode('PillBg', new Color(255, 255, 255, 230), 110, 36));
-        const lab = makeLabel('PillLab', text, 16, new Color(42, 32, 64, 255), 0, 0, 110);
+        n.addChild(makeColorNode('PillBg', new Color(255, 255, 255, 230), 124, 36));
+        const lab = makeLabel('PillLab', text, 16, new Color(42, 32, 64, 255), 0, 0, 124);
         n.addChild(lab.node);
         return { node: n, label: lab.label };
     }
@@ -180,11 +181,11 @@ export class UIManager extends Component {
         this.uiRoot.addChild(bar);
 
         const specs: { name: string; text: string; x: number; y: number; ad: boolean; fn: () => void }[] = [
-            { name: 'BtnUndo', text: '↩ Undo', x: -230, y: 24, ad: false, fn: () => this._game?.onUndo() },
-            { name: 'BtnRestart', text: '↻ Restart', x: -70, y: 24, ad: false, fn: () => this._game?.onRestart() },
-            { name: 'BtnHint', text: '💡 Hint', x: 90, y: 24, ad: false, fn: () => this._game?.onHint() },
-            { name: 'BtnTube', text: '+1 Tube  AD', x: -150, y: -32, ad: true, fn: () => this._game?.onAddTube() },
-            { name: 'BtnPack', text: 'Undo Pack  AD', x: 130, y: -32, ad: true, fn: () => this._game?.onUndoPack() },
+            { name: 'BtnUndo', text: Copy.undo, x: -230, y: 24, ad: false, fn: () => this._game?.onUndo() },
+            { name: 'BtnRestart', text: Copy.restart, x: -70, y: 24, ad: false, fn: () => this._game?.onRestart() },
+            { name: 'BtnHint', text: Copy.hint, x: 90, y: 24, ad: false, fn: () => this._game?.onHint() },
+            { name: 'BtnTube', text: Copy.addTubeAd, x: -150, y: -32, ad: true, fn: () => this._game?.onAddTube() },
+            { name: 'BtnPack', text: Copy.undoPackAd, x: 130, y: -32, ad: true, fn: () => this._game?.onUndoPack() },
         ];
         for (const s of specs) {
             const bg = s.ad ? new Color(255, 179, 71, 255) : new Color(255, 255, 255, 230);
@@ -215,10 +216,10 @@ export class UIManager extends Component {
         ensureUt(foot, this.designW - 40, 56);
         foot.setPosition(0, -this.designH / 2 + 48, 0);
         this.uiRoot.addChild(foot);
-        foot.addChild(makeButton('BtnShare', '📤 Share', 160, 48, new Color(255, 255, 255, 230), -100, 0, () => {
+        foot.addChild(makeButton('BtnShare', Copy.share, 160, 48, new Color(255, 255, 255, 230), -100, 0, () => {
             this._game?.onShare();
         }, new Color(42, 32, 64, 255)));
-        foot.addChild(makeButton('BtnLevels', '📚 Levels', 160, 48, new Color(255, 255, 255, 230), 100, 0, () => {
+        foot.addChild(makeButton('BtnLevels', Copy.levels, 160, 48, new Color(255, 255, 255, 230), 100, 0, () => {
             this._game?.onOpenLevels();
         }, new Color(42, 32, 64, 255)));
         this._footer = foot;
@@ -245,8 +246,8 @@ export class UIManager extends Component {
         cover.addChild(makeColorNode('BlobA', new Color(232, 244, 255, 180), 360, 360, -80, 200));
         cover.addChild(makeColorNode('BlobB', new Color(240, 255, 232, 160), 300, 300, 140, -80));
 
-        cover.addChild(makeLabel('Logo', 'SortSplash', 48, new Color(255, 45, 149, 255), 0, 200, 560).node);
-        cover.addChild(makeLabel('Tagline', 'Sort colors. One more pour.', 22, new Color(42, 32, 64, 255), 0, 140, 560).node);
+        cover.addChild(makeLabel('Logo', Copy.title, 48, new Color(255, 45, 149, 255), 0, 200, 560).node);
+        cover.addChild(makeLabel('Tagline', Copy.tagline, 22, new Color(42, 32, 64, 255), 0, 140, 560).node);
 
         const demo = new Node('DemoTubes');
         ensureUt(demo, 200, 110);
@@ -274,8 +275,9 @@ export class UIManager extends Component {
             this._game?.onStartPressed();
         });
         cover.addChild(play);
-        cover.addChild(makeLabel('Tip', 'TAP TO START', 24, new Color(42, 32, 64, 255), 0, -180, 560).node);
-        cover.addChild(makeLabel('HintPour', 'Tap a tube, then another to pour', 16, new Color(90, 70, 110, 255), 0, -220, 560).node);
+        // TAP TO START — player-facing string is Copy.tapToStart (点击开始)
+        cover.addChild(makeLabel('Tip', Copy.tapToStart, 24, new Color(42, 32, 64, 255), 0, -180, 560).node);
+        cover.addChild(makeLabel('HintPour', Copy.pourTip, 16, new Color(90, 70, 110, 255), 0, -220, 560).node);
 
         this._cover = cover;
         console.log('[UIManager] Cover built (Sprite/Label) with BtnPlay');
@@ -296,14 +298,14 @@ export class UIManager extends Component {
         const panel = this._makePanel('WinPanel', 340, 320, Color.WHITE);
         ov.addChild(panel);
         panel.addChild(makeLabel('WinEmoji', '🎉✨', 40, Color.WHITE, 0, 110, 120).node);
-        panel.addChild(makeLabel('WinTitle', 'Level Cleared!', 28, new Color(42, 32, 64, 255), 0, 60, 300).node);
-        const msg = makeLabel('WinMsg', 'Nice pouring!', 16, new Color(122, 111, 138, 255), 0, 22, 300);
+        panel.addChild(makeLabel('WinTitle', Copy.winTitle, 28, new Color(42, 32, 64, 255), 0, 60, 300).node);
+        const msg = makeLabel('WinMsg', Copy.winNice, 16, new Color(122, 111, 138, 255), 0, 22, 300);
         panel.addChild(msg.node);
         this._winMsg = msg.label;
-        panel.addChild(makeButton('BtnNext', 'Next Level →', 280, 48, new Color(255, 107, 181, 255), 0, -40, () => {
+        panel.addChild(makeButton('BtnNext', Copy.nextLevel, 280, 48, new Color(255, 107, 181, 255), 0, -40, () => {
             this._game?.onNextLevel();
         }));
-        panel.addChild(makeButton('BtnReplay', 'Replay', 280, 44, new Color(255, 255, 255, 255), 0, -100, () => {
+        panel.addChild(makeButton('BtnReplay', Copy.replay, 280, 44, new Color(255, 255, 255, 255), 0, -100, () => {
             this._game?.onReplay();
         }, new Color(42, 32, 64, 255)));
         this.uiRoot.addChild(ov);
@@ -318,13 +320,13 @@ export class UIManager extends Component {
         const panel = this._makePanel('AdPanel', 320, 280, new Color(42, 32, 64, 255));
         ov.addChild(panel);
         panel.addChild(makeLabel('AdEmoji', '📺', 40, Color.WHITE, 0, 90, 80).node);
-        const title = makeLabel('AdTitle', 'Ad playing…', 24, Color.WHITE, 0, 40, 280);
+        const title = makeLabel('AdTitle', Copy.adPlaying, 24, Color.WHITE, 0, 40, 280);
         panel.addChild(title.node);
         this._adTitle = title.label;
         const cd = makeLabel('AdCount', '3', 48, new Color(255, 179, 71, 255), 0, -10, 120);
         panel.addChild(cd.node);
         this._adCount = cd.label;
-        panel.addChild(makeLabel('AdSub', 'Rewarded video stub\n// TODO: wx.createRewardedVideoAd', 14, new Color(203, 184, 232, 255), 0, -80, 280).node);
+        panel.addChild(makeLabel('AdSub', Copy.adStub, 14, new Color(203, 184, 232, 255), 0, -80, 280).node);
         this.uiRoot.addChild(ov);
         this._ad = ov;
         ov.active = false;
@@ -334,7 +336,7 @@ export class UIManager extends Component {
         if (!this._ad) { onDone(); return; }
         this._ad.active = true;
         this._ad.setSiblingIndex(3000);
-        if (this._adTitle) this._adTitle.string = title || 'Ad playing…';
+        if (this._adTitle) this._adTitle.string = title || Copy.adPlaying;
         let n = Math.max(1, seconds | 0);
         if (this._adCount) this._adCount.string = String(n);
         const tick = () => {
@@ -360,8 +362,8 @@ export class UIManager extends Component {
         const ov = makeOverlay('LevelsOverlay', this.designW, this.designH, new Color(40, 20, 60, 120));
         const panel = this._makePanel('LevelsPanel', 360, 620, Color.WHITE);
         ov.addChild(panel);
-        panel.addChild(makeLabel('LvTitle', 'Levels', 28, new Color(42, 32, 64, 255), 0, 270, 200).node);
-        panel.addChild(makeLabel('LvSub', 'Tap to jump (unlocked only)', 14, new Color(122, 111, 138, 255), 0, 240, 320).node);
+        panel.addChild(makeLabel('LvTitle', Copy.levelsTitle, 28, new Color(42, 32, 64, 255), 0, 270, 200).node);
+        panel.addChild(makeLabel('LvSub', Copy.levelsSub, 14, new Color(122, 111, 138, 255), 0, 240, 320).node);
 
         const grid = new Node('LevelGrid');
         ensureUt(grid, 320, 460);
@@ -369,7 +371,7 @@ export class UIManager extends Component {
         panel.addChild(grid);
         this._levelGrid = grid;
 
-        panel.addChild(makeButton('BtnCloseLv', 'Close', 280, 44, new Color(255, 255, 255, 255), 0, -270, () => {
+        panel.addChild(makeButton('BtnCloseLv', Copy.close, 280, 44, new Color(255, 255, 255, 255), 0, -270, () => {
             this.hideLevels();
         }, new Color(42, 32, 64, 255)));
 
@@ -522,10 +524,10 @@ export class UIManager extends Component {
     }
 
     updateHUD(level: number, moves: number, freeUndos: number, canUndo: boolean, bonusUsed: boolean) {
-        if (this._levelLabel) this._levelLabel.string = `Lv ${level}`;
-        if (this._movesLabel) this._movesLabel.string = `Moves ${moves}`;
+        if (this._levelLabel) this._levelLabel.string = Copy.levelPill(level);
+        if (this._movesLabel) this._movesLabel.string = Copy.movesPill(moves);
         if (this._undoLabel) {
-            this._undoLabel.string = freeUndos >= 99 ? '↩ Undo' : `↩ Undo (${freeUndos})`;
+            this._undoLabel.string = freeUndos >= 99 ? Copy.undo : Copy.undoCount(freeUndos);
         }
         this._setBtnEnabled(this._btnUndo, canUndo);
         this._setBtnEnabled(this._btnAddTube, !bonusUsed);

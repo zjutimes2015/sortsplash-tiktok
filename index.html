@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#ffe8f5">
-<title>SortSplash — Sort colors. One more pour.</title>
+<title>颜色分拣 — 倒水归类，再来一关</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -13,7 +13,7 @@
   --tube-w:52px;--tube-h:168px;--layer-h:40px;--cap:4;
   --radius:18px;--shadow:0 8px 28px rgba(80,40,100,.12);
 }
-html,body{height:100%;overflow:hidden;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+html,body{height:100%;overflow:hidden;font-family:"KaiTi","STKaiti","楷体","DFKai-SB",serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   background:linear-gradient(165deg,var(--bg1) 0%,var(--bg2) 55%,#f0ffe8 100%);
   color:var(--ink);-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none}
 #app{max-width:420px;margin:0 auto;height:100%;display:flex;flex-direction:column;padding:env(safe-area-inset-top) 12px env(safe-area-inset-bottom);position:relative}
@@ -37,7 +37,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:10p
 .btn.secondary{background:linear-gradient(135deg,#7c9cff,#a8bdff);color:#fff}
 .btn.ghost{background:rgba(255,255,255,.65)}
 .btn.ad{background:linear-gradient(135deg,#ffb347,#ffd080);color:#4a3000;position:relative}
-.btn.ad::after{content:"AD";font-size:.55rem;background:#fff8;border-radius:4px;padding:1px 4px;margin-left:2px;font-weight:800}
+.btn.ad::after{content:"广告";font-size:.55rem;background:#fff8;border-radius:4px;padding:1px 4px;margin-left:2px;font-weight:800}
 
 #board-wrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative;padding:8px 0}
 #board{display:flex;flex-wrap:wrap;gap:14px 12px;justify-content:center;align-items:flex-end;max-width:100%;padding:12px 4px 20px}
@@ -115,44 +115,45 @@ footer{padding:4px 0 10px;display:flex;justify-content:center;gap:8px;flex-wrap:
 <div id="app">
   <div id="start-screen">
     <div class="big-emoji">🧪✨</div>
-    <div class="logo">SortSplash</div>
-    <div class="tagline">Sort colors. One more pour.</div>
+    <div class="logo">颜色分拣</div>
+    <div class="tagline">倒水归类，再来一关</div>
     <div class="demo-tubes" aria-hidden="true">
       <div class="mini-tube"><div class="mini-layer" style="background:#ff6b9d"></div><div class="mini-layer" style="background:#7c9cff"></div><div class="mini-layer" style="background:#ff6b9d"></div><div class="mini-layer" style="background:#3ecf8e"></div></div>
       <div class="mini-tube"><div class="mini-layer" style="background:#7c9cff"></div><div class="mini-layer" style="background:#3ecf8e"></div><div class="mini-layer" style="background:#ffb347"></div><div class="mini-layer" style="background:#7c9cff"></div></div>
       <div class="mini-tube"></div>
     </div>
-    <button class="btn primary" id="btn-play" style="min-width:200px;min-height:52px;font-size:1.05rem">▶ Play</button>
-    <p style="margin-top:16px;font-size:.75rem;color:var(--muted)">Tap a tube, then another to pour 💧</p>
+    <button class="btn primary" id="btn-play" style="min-width:200px;min-height:52px;font-size:1.05rem">▶ 开始游戏</button>
+    <p style="margin-top:10px;font-size:.85rem;color:var(--muted)">点击开始</p>
+    <p style="margin-top:8px;font-size:.75rem;color:var(--muted)">先点一只试管，再点另一只倒水 💧</p>
   </div>
 
   <header>
     <div class="brand">
-      <h1>SortSplash 🧪</h1>
-      <div class="tag">Sort colors. One more pour.</div>
+      <h1>颜色分拣 🧪</h1>
+      <div class="tag">倒水归类，再来一关</div>
     </div>
     <div class="stats">
-      <div class="pill">Lv <span id="hud-level">1</span></div>
-      <div class="pill">Moves <span id="hud-moves">0</span></div>
+      <div class="pill">第<span id="hud-level">1</span>关</div>
+      <div class="pill">步数 <span id="hud-moves">0</span></div>
     </div>
   </header>
 
   <div class="toolbar">
-    <button class="btn ghost" id="btn-undo" title="Undo">↩ Undo <span id="undo-count"></span></button>
-    <button class="btn ghost" id="btn-restart" title="Restart">↻ Restart</button>
-    <button class="btn ghost" id="btn-hint" title="Hint">💡 Hint</button>
-    <button class="btn ad" id="btn-add-tube" title="Add empty tube">+1 Tube</button>
-    <button class="btn ad" id="btn-undo-pack" title="More undos">Undo Pack</button>
+    <button class="btn ghost" id="btn-undo" title="撤销">↩ 撤销 <span id="undo-count"></span></button>
+    <button class="btn ghost" id="btn-restart" title="重开">↻ 重开</button>
+    <button class="btn ghost" id="btn-hint" title="提示">💡 提示</button>
+    <button class="btn ad" id="btn-add-tube" title="加一只空试管">+1试管</button>
+    <button class="btn ad" id="btn-undo-pack" title="更多撤销">撤销包</button>
   </div>
   <div class="hint-bar" id="hint-bar"></div>
 
   <div id="board-wrap">
-    <div id="board" role="group" aria-label="Puzzle tubes"></div>
+    <div id="board" role="group" aria-label="试管棋盘"></div>
   </div>
 
   <footer>
-    <button class="btn ghost" id="btn-share">📤 Share</button>
-    <button class="btn ghost" id="btn-levels">📚 Levels</button>
+    <button class="btn ghost" id="btn-share">📤 分享</button>
+    <button class="btn ghost" id="btn-levels">📚 选关</button>
   </footer>
 </div>
 
@@ -162,11 +163,11 @@ footer{padding:4px 0 10px;display:flex;justify-content:center;gap:8px;flex-wrap:
 <div class="overlay" id="win-overlay">
   <div class="modal">
     <div class="big-emoji">🎉✨</div>
-    <h2>Level Cleared!</h2>
-    <p id="win-msg">Nice pouring!</p>
+    <h2>本关过关！</h2>
+    <p id="win-msg">倒得漂亮！</p>
     <div class="actions">
-      <button class="btn primary" id="btn-next">Next Level →</button>
-      <button class="btn ghost" id="btn-replay">Replay</button>
+      <button class="btn primary" id="btn-next">下一关 →</button>
+      <button class="btn ghost" id="btn-replay">再玩一次</button>
     </div>
   </div>
 </div>
@@ -174,18 +175,18 @@ footer{padding:4px 0 10px;display:flex;justify-content:center;gap:8px;flex-wrap:
 <div class="overlay" id="ad-overlay">
   <div class="modal">
     <div class="big-emoji">📺</div>
-    <h2>Ad playing…</h2>
+    <h2>广告播放中…</h2>
     <div id="ad-countdown">3</div>
-    <p>Rewarded video stub<br><small>// TODO: TTMinis.game.createRewardedVideoAd</small></p>
+    <p>激励视频占位<br><small>看完即可领取奖励</small></p>
   </div>
 </div>
 
 <div class="overlay" id="levels-overlay">
   <div class="modal" style="max-height:80vh;overflow:auto">
-    <h2>Levels</h2>
-    <p>Tap to jump (unlocked only)</p>
+    <h2>选择关卡</h2>
+    <p>点已解锁关卡跳转</p>
     <div id="level-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px"></div>
-    <button class="btn ghost" id="btn-close-levels" style="width:100%">Close</button>
+    <button class="btn ghost" id="btn-close-levels" style="width:100%">关闭</button>
   </div>
 </div>
 
@@ -443,7 +444,7 @@ function render(){
     const wrap = document.createElement('div');
     wrap.className = 'tube-wrap' + (selected === idx ? ' selected' : '');
     wrap.setAttribute('role','button');
-    wrap.setAttribute('aria-label', `Tube ${idx+1}, ${tube.length} layers`);
+    wrap.setAttribute('aria-label', `试管 ${idx+1}，${tube.length} 层`);
     wrap.tabIndex = 0;
 
     const el = document.createElement('div');
@@ -460,7 +461,7 @@ function render(){
     wrap.appendChild(el);
     const label = document.createElement('div');
     label.className = 'tube-label';
-    label.textContent = tube.length ? '' : 'empty';
+    label.textContent = tube.length ? '' : '空';
     wrap.appendChild(label);
 
     wrap.addEventListener('click', () => onTubeTap(idx));
@@ -476,7 +477,7 @@ function onTubeTap(idx){
   if(pouring) return;
   if(selected < 0){
     if(!tubes[idx].length){
-      toast('Pick a tube with color');
+      toast('请先点有颜色的试管');
       return;
     }
     selected = idx;
@@ -501,7 +502,7 @@ function attemptPour(from, to){
       wraps[to].classList.add('invalid');
       setTimeout(()=>wraps[to].classList.remove('invalid'), 360);
     }
-    toast('Can\'t pour there');
+    toast('这里倒不进去');
     selected = -1;
     render();
     return;
@@ -534,7 +535,7 @@ function onWin(){
     save.highest = Math.min(level + 1, TOTAL_LEVELS);
     saveSave(save);
   }
-  const msg = `Level ${level} done in ${moves} moves!` + (level < TOTAL_LEVELS ? '' : ' You finished all levels! 🏆');
+  const msg = `第${level}关用了 ${moves} 步！` + (level < TOTAL_LEVELS ? '' : ' 全部通关！🏆');
   $('win-msg').textContent = msg;
   $('win-overlay').classList.add('show');
   // soft free undo refresh on clear
@@ -569,7 +570,7 @@ function loadLevel(n){
   selected = -1;
   history = [];
   bonusTubeUsed = false;
-  hintBar.textContent = level <= 2 ? 'Tip: pour matching colors into the same tube' : '';
+  hintBar.textContent = level <= 2 ? '提示：把相同颜色倒进同一只试管' : '';
   document.documentElement.style.setProperty('--cap', String(capacity));
   $('win-overlay').classList.remove('show');
   render();
@@ -577,13 +578,13 @@ function loadLevel(n){
 
 function restartLevel(){
   loadLevel(level);
-  toast('Level restarted');
+  toast('已重开本关');
 }
 
 function undo(){
   if(!history.length) return;
   if(freeUndos <= 0){
-    toast('No free undos — watch an ad for Undo Pack');
+    toast('免费撤销用完了，看广告领取撤销包');
     return;
   }
   const snap = history.pop();
@@ -633,10 +634,10 @@ function findHint(){
 
 function showHint(){
   const h = findHint();
-  if(!h){ toast('No move found — try Undo or +1 Tube'); return; }
+  if(!h){ toast('暂无提示，试试撤销或加试管'); return; }
   selected = h.i;
   render();
-  hintBar.textContent = `Hint: pour tube ${h.i+1} → tube ${h.j+1}`;
+  hintBar.textContent = `提示：从试管 ${h.i+1} 倒向试管 ${h.j+1}`;
   clearTimeout(hintTimeout);
   hintTimeout = setTimeout(()=>{ hintBar.textContent=''; }, 4000);
   // briefly highlight target
@@ -669,13 +670,13 @@ function showRewardedAd(onSuccess){
 }
 
 function addBonusTube(){
-  if(bonusTubeUsed){ toast('Already used +1 Tube this level'); return; }
+  if(bonusTubeUsed){ toast('本关已经加过试管了'); return; }
   showRewardedAd(()=>{
     tubes.push([]);
     bonusTubeUsed = true;
     selected = -1;
     render();
-    toast('+1 empty tube added! 🧪');
+    toast('已加一只空试管！🧪');
   });
 }
 
@@ -685,15 +686,15 @@ function buyUndoPack(){
     save.freeUndos = freeUndos;
     saveSave(save);
     updateHUD();
-    toast('+5 undos unlocked!');
+    toast('获得 5 次撤销！');
   });
 }
 
 // ---------- Share ----------
 function shareChallenge(){
-  const text = `I cleared Level ${Math.max(1, save.highest-1)} on SortSplash! 🧪✨ Sort colors. One more pour.`;
+  const text = `我在「颜色分拣」过了第${Math.max(1, save.highest-1)}关！🧪✨ 倒水归类，再来一关`;
   if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(text).then(()=>toast('Copied challenge text!')).catch(()=>fallbackShare(text));
+    navigator.clipboard.writeText(text).then(()=>toast('已复制挑战文案！')).catch(()=>fallbackShare(text));
   } else fallbackShare(text);
 }
 function fallbackShare(text){
@@ -705,9 +706,9 @@ function fallbackShare(text){
     a.download = 'sortsplash-challenge.txt';
     a.click();
     URL.revokeObjectURL(a.href);
-    toast('Challenge file downloaded');
+    toast('已下载挑战文案');
   }catch(e){
-    prompt('Copy this:', text);
+    prompt('复制这段话：', text);
   }
 }
 
@@ -751,7 +752,7 @@ $('btn-close-levels').addEventListener('click', ()=>$('levels-overlay').classLis
 $('btn-next').addEventListener('click', ()=>{
   $('win-overlay').classList.remove('show');
   if(level < TOTAL_LEVELS) loadLevel(level+1);
-  else toast('All levels cleared! 🏆');
+  else toast('全部通关！🏆');
 });
 $('btn-replay').addEventListener('click', ()=>{
   $('win-overlay').classList.remove('show');

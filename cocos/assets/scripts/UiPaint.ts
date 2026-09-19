@@ -16,6 +16,7 @@ import {
     Node, UITransform, Sprite, SpriteFrame, Texture2D, Label, Color,
     Layers, Button, BlockInputEvents, Widget, Graphics,
 } from 'cc';
+import { FONT_FAMILY, Copy } from './Copy';
 
 export const UI_2D = (Layers && Layers.Enum && Layers.Enum.UI_2D) || (1 << 25);
 
@@ -35,7 +36,7 @@ export function applySystemFont(lab: Label) {
         enableWrapText?: boolean;
     };
     if ('useSystemFont' in anyLab) anyLab.useSystemFont = true;
-    if ('fontFamily' in anyLab) anyLab.fontFamily = 'sans-serif';
+    if ('fontFamily' in anyLab) anyLab.fontFamily = FONT_FAMILY;
     if ('font' in anyLab) anyLab.font = null;
     const modes = (Label as typeof Label & { CacheMode?: { NONE: number } }).CacheMode;
     if (modes && 'cacheMode' in anyLab) anyLab.cacheMode = modes.NONE;
@@ -295,11 +296,11 @@ export function makePlayButton(onClick: () => void): Node {
     n.addChild(makeColorNode('PlayHalo', new Color(32, 6, 48, 255), w + 20, h + 20));
     n.addChild(makeColorNode('PlayFill', new Color(255, 45, 149, 255), w, h));
 
-    const shadow = makeLabel('PlayShadow', '▶  PLAY', 40, new Color(20, 0, 32, 255), 3, -3, w - 12);
+    const shadow = makeLabel('PlayShadow', Copy.play, 40, new Color(20, 0, 32, 255), 3, -3, w - 12);
     shadow.label.overflow = Label.Overflow.NONE;
     n.addChild(shadow.node);
 
-    const lab = makeLabel('BtnLab', '▶  PLAY', 40, Color.WHITE, 0, 0, w - 12);
+    const lab = makeLabel('BtnLab', Copy.play, 40, Color.WHITE, 0, 0, w - 12);
     lab.label.overflow = Label.Overflow.NONE;
     n.addChild(lab.node);
 

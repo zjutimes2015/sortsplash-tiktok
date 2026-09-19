@@ -97,7 +97,8 @@ assert(/paintSolid/.test(paint), 'UiPaint.paintSolid exists');
 assert(/█/.test(paint), 'Label block tiles (█) cover real UITransform size');
 assert(/SpriteFrame/.test(paint) && /Texture2D/.test(paint), 'Sprite baked-color texture fill');
 assert(/useSystemFont/.test(paint), 'Labels request system font (3.8)');
-assert(/sans-serif/.test(paint), 'Labels use sans-serif so WeChat needs no custom TTF');
+assert(/KaiTi/.test(paint) || /KaiTi/.test(read('assets/scripts/Copy.ts')),
+    'Labels prefer KaiTi / STKaiti / 楷体 / DFKai-SB (WeChat may fall back)');
 assert(/enableWrapText/.test(paint), 'block Labels enable wrap for █ tiles');
 assert(/Overflow\.CLAMP/.test(paint) && /Overflow\.NONE/.test(paint), 'Labels use CLAMP/NONE, not SHRINK-to-zero');
 assert(/stretchToParent/.test(paint) && /isAlignLeft/.test(paint), 'Widget stretchToParent helper');
@@ -123,7 +124,9 @@ assert(/makePlayButton/.test(ui) && /stretchToParent\(cover\)/.test(ui),
 assert(/stretchToParent\(this\.uiRoot\)/.test(ui) || /stretchToParent\(bg\)/.test(ui),
     'UIRoot/CoverBg Widget-aligned full screen');
 assert(/logNodeRect\(\s*'BtnPlay'/.test(ui), 'buildCover logs BtnPlay rect');
-assert(/TAP TO START/.test(ui), 'cover has high-contrast TAP TO START label');
+assert(/TAP TO START/.test(ui) || /Copy\.tapToStart/.test(ui) || /点击开始/.test(ui),
+    'cover has high-contrast TAP TO START / 点击开始 label');
+assert(/颜色分拣/.test(ui) || /Copy\.title/.test(ui), 'Cover title uses ZH copy');
 
 assert(/stretchToParent\(\s*ui\s*\)/.test(gm), 'UIRoot Widget-aligned to Canvas');
 assert(/stretchToParent\(\s*canvas\s*\)/.test(gm), 'Canvas Widget-aligned for wx 720×1280');

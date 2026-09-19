@@ -9,6 +9,7 @@
  */
 import { _decorator, Component } from 'cc';
 import { WxAdapter } from './WxAdapter';
+import { Copy } from './Copy';
 
 const { ccclass } = _decorator;
 
@@ -63,7 +64,7 @@ export class AdBridge extends Component {
             this._showWxRewarded(placement, onSuccess, fail);
             return;
         }
-        this._simulateCountdown(3, 'Ad playing…', onSuccess);
+        this._simulateCountdown(3, Copy.adPlaying, onSuccess);
     }
 
     /**
@@ -120,7 +121,7 @@ export class AdBridge extends Component {
             if (!this._rewarded) {
                 this._rewarded = WxAdapter.call('createRewardedVideoAd', { adUnitId });
                 if (!this._rewarded) {
-                    this._simulateCountdown(3, 'Ad playing…', onSuccess);
+                    this._simulateCountdown(3, Copy.adPlaying, onSuccess);
                     return;
                 }
                 if (typeof this._rewarded.onLoad === 'function') {
@@ -135,7 +136,7 @@ export class AdBridge extends Component {
                         this._pendingSuccess = null;
                         this._pendingFail = null;
                         this._busy = false;
-                        if (ok) this._simulateCountdown(3, 'Ad playing…', ok);
+                        if (ok) this._simulateCountdown(3, Copy.adPlaying, ok);
                     });
                 }
             }
@@ -155,7 +156,7 @@ export class AdBridge extends Component {
                 });
             }
             if (!this._rewarded || typeof this._rewarded.show !== 'function') {
-                this._simulateCountdown(3, 'Ad playing…', onSuccess);
+                this._simulateCountdown(3, Copy.adPlaying, onSuccess);
                 return;
             }
             this._pendingSuccess = onSuccess;
@@ -170,13 +171,13 @@ export class AdBridge extends Component {
                     .catch((err: any) => {
                         console.warn('[AdBridge] rewarded show/load failed — fallback', err);
                         this._busy = false;
-                        this._simulateCountdown(3, 'Ad playing…', onSuccess);
+                        this._simulateCountdown(3, Copy.adPlaying, onSuccess);
                     });
             });
         } catch (e) {
             console.warn('[AdBridge] createRewardedVideoAd failed — fallback', e);
             this._busy = false;
-            this._simulateCountdown(3, 'Ad playing…', onSuccess);
+            this._simulateCountdown(3, Copy.adPlaying, onSuccess);
         }
     }
 

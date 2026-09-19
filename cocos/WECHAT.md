@@ -2,6 +2,10 @@
 
 Cocos Creator **3.8.8** → 平台 **微信小游戏**（`wechatgame`）。根目录 `index.html` 只是玩法原型，**不能**当小游戏包上传。
 
+> **简体中文 UI + 楷体**  
+> 玩家可见文案均为简体中文（封面标题「颜色分拣」，标语「倒水归类，再来一关」，按钮「▶ 开始游戏」等）。所有 Label 走系统字体（`useSystemFont = true`），`fontFamily` 优先 `KaiTi, STKaiti, 楷体, DFKai-SB, serif`。微信真机若未安装楷体，会回退到系统默认衬线/黑体，属正常现象。  
+> **合并后必须在 Creator 里重新构建 `wechatgame` 并重新导入**微信开发者工具，旧包不会带上中文与字体改动。
+
 > **黑屏 + WAGame.js 堆栈（Windows 模拟器 / mg lib 3.17.2）**  
 > 最常见原因是 **还在用 PR #4 之前的旧 `build/wechatgame`**（空白 UI 包）。必须用本仓库最新 `cocos/` **重新构建并重新导入**，不要只点「编译」旧目录。  
 > 脚本侧已保证：`wx` 存在时**绝不读 `window.localStorage`**（该 getter 会抛错并中断 boot）；缺失的 `wx.*` 不会在启动时抛错。
@@ -14,8 +18,8 @@ Cocos Creator **3.8.8** → 平台 **微信小游戏**（`wechatgame`）。根�
    - `GameController` 在 **Canvas 下**（不是 Scene 的兄弟节点），只挂 `cc.UITransform` + `GameManager`（压缩 CID `087c0aZ3vRDYr9EvCSEIBd3`）
 4. 点编辑器 **▶ 预览（浏览器）**
 5. 控制台应出现 `[GameManager] boot(...) SUCCESS`（`onLoad` 或 `start()` 补建）
-6. 画面应是 **SortSplash 封面 + 超大亮粉 ▶ PLAY 按钮**（不是只有清屏色）
-7. 点 **Play** → 点试管倒水
+6. 画面应是 **「颜色分拣」封面 + 超大亮粉 ▶ 开始游戏（Play）按钮**（不是只有清屏色）
+7. 点 **开始游戏** → 点试管倒水
 
 封面用 **Graphics 色块 + 烘焙颜色 Sprite（CUSTOM 真实尺寸）+ 系统字体「█」铺满**，Play 至少 **320×88**，Cover/UIRoot/Canvas 四边 Widget 拉满 720×1280。若 `onLoad` 时 Scene 子节点还没挂齐，`start()` 会再跑一遍 `boot('start', true)`。
 
@@ -36,7 +40,7 @@ node tools/verify-wechat-runtime.mjs
 ### A. 在 Creator 里打一份新包
 
 1. 用 **Cocos Creator 3.8.8** 打开本仓库的 **`cocos/`**（不要打开仓库根目录，也不要打开旧的 `build/wechatgame`）
-2. 打开 `assets/scenes/main.scene`，先用 **▶ 浏览器预览** 确认能看到 **SortSplash + ▶ Play**
+2. 打开 `assets/scenes/main.scene`，先用 **▶ 浏览器预览** 确认能看到 **颜色分拣 + 超大亮粉 ▶ 开始游戏（Play）**
 3. 菜单 **项目 → 构建发布**
 4. 发布平台：**微信小游戏**（`wechatgame`）
 5. 起始场景：`db://assets/scenes/main.scene`（`main`）
@@ -69,7 +73,7 @@ node tools/verify-wechat-runtime.mjs
 3. 打开 **`game.json`**，确认 `"deviceOrientation": "portrait"`
 4. 详情 → 本地设置：勾选 **不校验合法域名**（与 `urlCheck: false` 同类）
 5. 模拟器基础库用小游戏 **mg lib**（3.17.2 可用）；项目类型是 **小游戏**
-6. 点编译：控制台应有 `[GameManager] boot(...) wx=true SUCCESS` 以及 `[UI] BtnPlay ... contentSize=320x88`，画面是封面 + **巨大亮粉 PLAY**
+6. 点编译：控制台应有 `[GameManager] boot(...) wx=true SUCCESS` 以及 `[UI] BtnPlay ... contentSize=320x88`，画面是封面 + **巨大亮粉 ▶ 开始游戏（Play）**
 7. 真机预览：`wx.setStorageSync('sortsplash_v1', …)` 能记下最高关与 Undo
 
 `build-templates/wechatgame/project.config.json` 会在构建时拷进产物（`compileType: game`，`urlCheck: false`）。若 Creator 又生成了一份，以构建目录里的文件为准，按上面核对。
