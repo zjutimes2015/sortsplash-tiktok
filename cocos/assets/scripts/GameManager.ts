@@ -9,7 +9,7 @@
  * - Never call find() — parent / scene + getChildByName only.
  */
 import {
-    _decorator, Component, Node, UITransform, Widget, Canvas, Camera,
+    _decorator, Component, Node, UITransform, Canvas, Camera,
     director, view, ResolutionPolicy, Color,
 } from 'cc';
 import { LevelManager, TOTAL_LEVELS, CAP } from './LevelManager';
@@ -18,7 +18,7 @@ import { UIManager } from './UIManager';
 import { AdBridge } from './AdBridge';
 import { Storage, SaveData } from './Storage';
 import { WxAdapter } from './WxAdapter';
-import { UI_2D, markUi } from './UiPaint';
+import { UI_2D, markUi, stretchToParent } from './UiPaint';
 
 const { ccclass, executionOrder } = _decorator;
 const orderEarly: ClassDecorator = (typeof executionOrder === 'function'
@@ -200,18 +200,10 @@ export class GameManager extends Component {
 
             const ut = canvas.addComponent(UITransform);
             ut.setContentSize(this.designW, this.designH);
-            const widget = canvas.addComponent(Widget);
-            widget.isAlignTop = widget.isAlignBottom = widget.isAlignLeft = widget.isAlignRight = true;
-            widget.top = widget.bottom = widget.left = widget.right = 0;
-            if (Widget.AlignMode) widget.alignMode = Widget.AlignMode.ON_WINDOW_RESIZE;
+            stretchToParent(canvas);
             this.ensureCanvasCamera(canvas);
         } else {
-            let w = canvas.getComponent(Widget);
-            if (!w) {
-                w = canvas.addComponent(Widget);
-                w.isAlignTop = w.isAlignBottom = w.isAlignLeft = w.isAlignRight = true;
-                w.top = w.bottom = w.left = w.right = 0;
-            }
+            stretchToParent(canvas);
             if (!canvas.getComponent(UITransform)) {
                 const ut = canvas.addComponent(UITransform);
                 ut.setContentSize(this.designW, this.designH);
@@ -244,6 +236,7 @@ export class GameManager extends Component {
 
         const board = ensureChild('BoardRoot', 2, 680, 720);
         const ui = ensureChild('UIRoot', 10, this.designW, this.designH);
+        stretchToParent(ui);
         this.ensureCanvasCamera(canvas);
         return { canvas, board, ui };
     }

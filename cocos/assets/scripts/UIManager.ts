@@ -1,17 +1,17 @@
 /**
  * All HUD / overlays built in code.
- * Cover uses Sprite/Label color blocks (not Graphics) so Creator browser
- * preview shows Play even when Graphics meshes do not flush.
+ * Cover is Widget-stretched to Canvas; Play is a 320×88 bright-pink control
+ * with Graphics + baked-color Sprite + system-font █ tiles so WeChat paints it.
  */
 import {
     _decorator, Component, Node, Label, Color,
-    Button, Widget, BlockInputEvents, UIOpacity, tween, Tween, Vec3,
+    Button, BlockInputEvents, UIOpacity, tween, Tween, Vec3,
 } from 'cc';
 import { TOTAL_LEVELS } from './LevelManager';
 import type { GameManager } from './GameManager';
 import {
     markUi, ensureUt, makeLabel, makeColorNode,
-    makeButton, makeOverlay,
+    makeButton, makeOverlay, makePlayButton, stretchToParent, logNodeRect,
 } from './UiPaint';
 
 const { ccclass } = _decorator;
@@ -121,9 +121,7 @@ export class UIManager extends Component {
         if (!bg && canvas) {
             bg = new Node('BgRoot');
             ensureUt(bg, this.designW, this.designH);
-            const w = bg.addComponent(Widget);
-            w.isAlignTop = w.isAlignBottom = w.isAlignLeft = w.isAlignRight = true;
-            w.top = w.bottom = w.left = w.right = 0;
+            stretchToParent(bg);
             canvas.insertChild(bg, 0);
         }
         if (!bg) return;
@@ -226,21 +224,29 @@ export class UIManager extends Component {
         this._footer = foot;
     }
 
-    // ─── Start cover (Sprite/Label only — Graphics is a preview no-op) ───
+    // ─── Start cover (full-screen Widget + huge Play — WeChat must see it) ───
     private _buildCover() {
         if (!this.uiRoot) return;
+        stretchToParent(this.uiRoot);
         const cover = new Node('Cover');
         ensureUt(cover, this.designW, this.designH);
+        stretchToParent(cover);
         cover.addComponent(BlockInputEvents);
         this.uiRoot.addChild(cover);
 
-        cover.addChild(makeColorNode('CoverBg', new Color(255, 245, 251, 255), this.designW, this.designH));
+        const bg = makeColorNode('CoverBg', new Color(255, 245, 251, 255), this.designW, this.designH);
+        stretchToParent(bg);
+        const fillNames = ['FillGfx', 'FillSpr', 'FillBlk'];
+        for (let i = 0; i < fillNames.length; i++) {
+            const child = bg.getChildByName(fillNames[i]);
+            if (child) stretchToParent(child);
+        }
+        cover.addChild(bg);
         cover.addChild(makeColorNode('BlobA', new Color(232, 244, 255, 180), 360, 360, -80, 200));
         cover.addChild(makeColorNode('BlobB', new Color(240, 255, 232, 160), 300, 300, 140, -80));
 
-        cover.addChild(makeLabel('Emoji', '🧪✨', 48, Color.WHITE, 0, 220, 200).node);
-        cover.addChild(makeLabel('Logo', 'SortSplash', 44, new Color(255, 107, 181, 255), 0, 150, 500).node);
-        cover.addChild(makeLabel('Tagline', 'Sort colors. One more pour.', 20, new Color(122, 111, 138, 255), 0, 100, 500).node);
+        cover.addChild(makeLabel('Logo', 'SortSplash', 48, new Color(255, 45, 149, 255), 0, 200, 560).node);
+        cover.addChild(makeLabel('Tagline', 'Sort colors. One more pour.', 22, new Color(42, 32, 64, 255), 0, 140, 560).node);
 
         const demo = new Node('DemoTubes');
         ensureUt(demo, 200, 110);
@@ -264,14 +270,23 @@ export class UIManager extends Component {
             }
         }
 
-        const play = makeButton('BtnPlay', '▶  Play', 220, 56, new Color(255, 107, 181, 255), 0, -140, () => {
+        const play = makePlayButton(() => {
             this._game?.onStartPressed();
         });
         cover.addChild(play);
-        cover.addChild(makeLabel('Tip', 'Tap a tube, then another to pour 💧', 16, new Color(122, 111, 138, 255), 0, -210, 560).node);
+        cover.addChild(makeLabel('Tip', 'TAP TO START', 24, new Color(42, 32, 64, 255), 0, -180, 560).node);
+        cover.addChild(makeLabel('HintPour', 'Tap a tube, then another to pour', 16, new Color(90, 70, 110, 255), 0, -220, 560).node);
 
         this._cover = cover;
         console.log('[UIManager] Cover built (Sprite/Label) with BtnPlay');
+        logNodeRect('Cover', cover);
+        logNodeRect('BtnPlay', play);
+        logNodeRect('UIRoot', this.uiRoot);
+        this.scheduleOnce(() => {
+            logNodeRect('Cover(after Widget)', cover);
+            logNodeRect('BtnPlay(after Widget)', play);
+            logNodeRect('UIRoot(after Widget)', this.uiRoot);
+        }, 0);
     }
 
     // ─── Win overlay ───

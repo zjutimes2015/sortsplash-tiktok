@@ -94,9 +94,39 @@ const uiCcImport = ui.match(/import \{[\s\S]*?\} from 'cc'/);
 assert(uiCcImport && !/\bGraphics\b/.test(uiCcImport[0]), 'UIManager does not import Graphics from cc');
 
 assert(/paintSolid/.test(paint), 'UiPaint.paintSolid exists');
-assert(/█/.test(paint), 'Label block fallback (█) when SpriteFrame fails');
-assert(/SpriteFrame/.test(paint) && /Texture2D/.test(paint), 'Sprite 1x1 white texture fill');
+assert(/█/.test(paint), 'Label block tiles (█) cover real UITransform size');
+assert(/SpriteFrame/.test(paint) && /Texture2D/.test(paint), 'Sprite baked-color texture fill');
 assert(/useSystemFont/.test(paint), 'Labels request system font (3.8)');
+assert(/sans-serif/.test(paint), 'Labels use sans-serif so WeChat needs no custom TTF');
+assert(/enableWrapText/.test(paint), 'block Labels enable wrap for █ tiles');
+assert(/Overflow\.CLAMP/.test(paint) && /Overflow\.NONE/.test(paint), 'Labels use CLAMP/NONE, not SHRINK-to-zero');
+assert(/stretchToParent/.test(paint) && /isAlignLeft/.test(paint), 'Widget stretchToParent helper');
+assert(/logNodeRect/.test(paint), 'logNodeRect for BtnPlay world position / contentSize');
+assert(/makePlayButton/.test(paint) && /PLAY_BTN_W\s*=\s*320/.test(paint) && /PLAY_BTN_H\s*=\s*88/.test(paint),
+    'Play button is 320×88 (min 280×72)');
+assert(/255,\s*45,\s*149/.test(paint), 'Play fill is bright pink');
+assert(/FillGfx/.test(paint) && /FillSpr/.test(paint) && /FillBlk/.test(paint),
+    'fills use Graphics + Sprite + █ children (not Sprite on the sized node)');
+assert(/SizeMode\.CUSTOM/.test(paint), 'Sprite sizeMode CUSTOM');
+{
+    const customAt = paint.indexOf('sp.sizeMode = Sprite.SizeMode.CUSTOM');
+    const frameAt = paint.indexOf('sp.spriteFrame = sf');
+    const resizeAt = paint.indexOf('ensureUt(node, w, h)');
+    assert(customAt >= 0 && frameAt >= 0 && customAt < frameAt,
+        'sizeMode CUSTOM is set before spriteFrame so TRIMMED cannot reset UT to 2×2');
+    assert(resizeAt >= 0 && frameAt < paint.lastIndexOf('ensureUt(node, w, h)'),
+        'contentSize is re-applied after assigning spriteFrame');
+}
+
+assert(/makePlayButton/.test(ui) && /stretchToParent\(cover\)/.test(ui),
+    'cover uses makePlayButton + Widget-aligned Cover');
+assert(/stretchToParent\(this\.uiRoot\)/.test(ui) || /stretchToParent\(bg\)/.test(ui),
+    'UIRoot/CoverBg Widget-aligned full screen');
+assert(/logNodeRect\(\s*'BtnPlay'/.test(ui), 'buildCover logs BtnPlay rect');
+assert(/TAP TO START/.test(ui), 'cover has high-contrast TAP TO START label');
+
+assert(/stretchToParent\(\s*ui\s*\)/.test(gm), 'UIRoot Widget-aligned to Canvas');
+assert(/stretchToParent\(\s*canvas\s*\)/.test(gm), 'Canvas Widget-aligned for wx 720×1280');
 
 const objects = Array.isArray(scene) ? scene : [];
 const sceneNode = objects.find((o) => o && o.__type__ === 'cc.Scene');
