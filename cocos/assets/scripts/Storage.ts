@@ -1,6 +1,10 @@
 /**
  * Persist best level / undos.
- * Browser preview → localStorage; WeChat → wx.setStorageSync / wx.getStorageSync.
+ * Browser preview → localStorage (via WxAdapter.browserStorage);
+ * WeChat → wx.setStorageSync / wx.getStorageSync.
+ *
+ * load()/save() never throw — missing wx APIs or a throwing
+ * window.localStorage getter must not abort GameManager.boot().
  */
 import { WxAdapter } from './WxAdapter';
 
@@ -19,14 +23,19 @@ const DEFAULT_SAVE: SaveData = {
 };
 
 export class Storage {
+    static defaults(): SaveData {
+        return Object.assign({}, DEFAULT_SAVE);
+    }
+
     static load(): SaveData {
         try {
             const raw = WxAdapter.getStorageSync(STORAGE_KEY);
-            if (!raw) return Object.assign({}, DEFAULT_SAVE);
+            if (!raw) return Storage.defaults();
             const parsed = JSON.parse(raw);
             return Object.assign({}, DEFAULT_SAVE, parsed);
         } catch (e) {
-            return Object.assign({}, DEFAULT_SAVE);
+            console.warn('[Storage] load failed — defaults', e);
+            return Storage.defaults();
         }
     }
 
@@ -34,7 +43,7 @@ export class Storage {
         try {
             WxAdapter.setStorageSync(STORAGE_KEY, JSON.stringify(data));
         } catch (e) {
-            /* ignore quota / private mode */
+            console.warn('[Storage] save failed', e);
         }
     }
 }

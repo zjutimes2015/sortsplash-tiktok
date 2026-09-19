@@ -2,13 +2,15 @@
  * WeChat rewarded / interstitial ads.
  * Real API shape with TODO placeholders; falls back to a simulated countdown overlay.
  *
+ * Missing or partial wx ad APIs (touristappid / DevTools / no 流量主) must
+ * never throw during boot or play — show() may return undefined, not a Promise.
+ *
  * Replace adUnitId values in AD_UNITS (see README / WECHAT.md).
  */
 import { _decorator, Component } from 'cc';
+import { WxAdapter } from './WxAdapter';
 
 const { ccclass } = _decorator;
-
-declare const wx: any;
 
 /** Placeholder ad unit IDs — replace with WeChat 流量主 IDs before shipping. */
 export const AD_UNITS = {
@@ -22,6 +24,11 @@ export const AD_UNITS = {
 };
 
 export type RewardedPlacement = 'tube' | 'undo' | 'hint';
+
+function asPromise(ret: any): Promise<any> {
+    if (ret && typeof ret.then === 'function') return ret;
+    return Promise.resolve(ret);
+}
 
 @ccclass('AdBridge')
 export class AdBridge extends Component {
@@ -52,7 +59,7 @@ export class AdBridge extends Component {
         const fail = onFail || (() => { /* no-op */ });
 
         // TODO: wx.createRewardedVideoAd — replace AD_UNITS.rewarded* with real 广告位 ID
-        if (typeof wx !== 'undefined' && wx.createRewardedVideoAd) {
+        if (WxAdapter.hasApi('createRewardedVideoAd')) {
             this._showWxRewarded(placement, onSuccess, fail);
             return;
         }
@@ -64,24 +71,36 @@ export class AdBridge extends Component {
      */
     showInterstitial(onDone: () => void) {
         // TODO: wx.createInterstitialAd — replace AD_UNITS.interstitial
-        if (typeof wx !== 'undefined' && wx.createInterstitialAd) {
+        if (WxAdapter.hasApi('createInterstitialAd')) {
             try {
                 if (!this._interstitial) {
-                    this._interstitial = wx.createInterstitialAd({
+                    this._interstitial = WxAdapter.call('createInterstitialAd', {
                         adUnitId: AD_UNITS.interstitial,
                     });
-                    this._interstitial.onError((err: any) => {
-                        console.warn('[AdBridge] interstitial error', err);
-                    });
-                    this._interstitial.onClose(() => {
-                        const done = this._pendingSuccess;
-                        this._pendingSuccess = null;
-                        this._busy = false;
-                        if (done) done();
-                    });
+                    if (!this._interstitial) {
+                        onDone();
+                        return;
+                    }
+                    if (typeof this._interstitial.onError === 'function') {
+                        this._interstitial.onError((err: any) => {
+                            console.warn('[AdBridge] interstitial error', err);
+                        });
+                    }
+                    if (typeof this._interstitial.onClose === 'function') {
+                        this._interstitial.onClose(() => {
+                            const done = this._pendingSuccess;
+                            this._pendingSuccess = null;
+                            this._busy = false;
+                            if (done) done();
+                        });
+                    }
+                }
+                if (!this._interstitial || typeof this._interstitial.show !== 'function') {
+                    onDone();
+                    return;
                 }
                 this._pendingSuccess = onDone;
-                this._interstitial.show().catch((err: any) => {
+                asPromise(this._interstitial.show()).catch((err: any) => {
                     this._pendingSuccess = null;
                     this._busy = false;
                     console.warn('[AdBridge] interstitial show failed, skip', err);
@@ -99,20 +118,28 @@ export class AdBridge extends Component {
         const adUnitId = this._unitFor(placement);
         try {
             if (!this._rewarded) {
-                this._rewarded = wx.createRewardedVideoAd({ adUnitId });
-                this._rewarded.onLoad(() => {
-                    console.log('[AdBridge] rewarded onLoad');
-                });
-                this._rewarded.onError((err: any) => {
-                    console.warn('[AdBridge] rewarded onError — fallback countdown', err);
-                    const ok = this._pendingSuccess;
-                    this._pendingSuccess = null;
-                    this._pendingFail = null;
-                    this._busy = false;
-                    if (ok) this._simulateCountdown(3, 'Ad playing…', ok);
-                });
+                this._rewarded = WxAdapter.call('createRewardedVideoAd', { adUnitId });
+                if (!this._rewarded) {
+                    this._simulateCountdown(3, 'Ad playing…', onSuccess);
+                    return;
+                }
+                if (typeof this._rewarded.onLoad === 'function') {
+                    this._rewarded.onLoad(() => {
+                        console.log('[AdBridge] rewarded onLoad');
+                    });
+                }
+                if (typeof this._rewarded.onError === 'function') {
+                    this._rewarded.onError((err: any) => {
+                        console.warn('[AdBridge] rewarded onError — fallback countdown', err);
+                        const ok = this._pendingSuccess;
+                        this._pendingSuccess = null;
+                        this._pendingFail = null;
+                        this._busy = false;
+                        if (ok) this._simulateCountdown(3, 'Ad playing…', ok);
+                    });
+                }
             }
-            if (!this._wxCloseBound) {
+            if (!this._wxCloseBound && this._rewarded && typeof this._rewarded.onClose === 'function') {
                 this._wxCloseBound = true;
                 this._rewarded.onClose((res: any) => {
                     const ok = this._pendingSuccess;
@@ -127,12 +154,19 @@ export class AdBridge extends Component {
                     }
                 });
             }
+            if (!this._rewarded || typeof this._rewarded.show !== 'function') {
+                this._simulateCountdown(3, 'Ad playing…', onSuccess);
+                return;
+            }
             this._pendingSuccess = onSuccess;
             this._pendingFail = onFail;
             this._busy = true;
-            this._rewarded.show().catch(() => {
-                this._rewarded.load()
-                    .then(() => this._rewarded.show())
+            asPromise(this._rewarded.show()).catch(() => {
+                const reload = this._rewarded && typeof this._rewarded.load === 'function'
+                    ? asPromise(this._rewarded.load())
+                    : Promise.reject(new Error('no load'));
+                reload
+                    .then(() => asPromise(this._rewarded.show()))
                     .catch((err: any) => {
                         console.warn('[AdBridge] rewarded show/load failed — fallback', err);
                         this._busy = false;
