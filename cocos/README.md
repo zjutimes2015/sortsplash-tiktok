@@ -8,7 +8,7 @@ HTML 原型（仓库根目录 `index.html`）仅作玩法与关卡设计参考�
 
 ## English (short)
 
-Re-open this `cocos/` folder in **Cocos Creator 3.8.8** → open `assets/scenes/main.scene`. Console should not show `[Scene] Missing class` on `GameController`. ▶ Preview should show the start UI (Play cover). All UI and tubes are built in code (Graphics + Label + Button + Widget); no prefabs or art required. Switch build platform to **微信小游戏**, replace `adUnitId` placeholders in `assets/scripts/AdBridge.ts`, then build. The root `index.html` is a design reference only.
+Re-open this `cocos/` folder in **Cocos Creator 3.8.8** → open `assets/scenes/main.scene`. Hierarchy: `Scene → Canvas → GameController` (GameManager only). Console should not show `[Scene] Missing class`. ▶ Preview should show the **SortSplash Play cover** (Sprite/Label fills; `start()` rebuilds if `onLoad` raced). Switch build platform to **微信小游戏**, replace `adUnitId` placeholders in `assets/scripts/AdBridge.ts`, then build. The root `index.html` is a design reference only.
 
 ---
 
@@ -16,14 +16,16 @@ Re-open this `cocos/` folder in **Cocos Creator 3.8.8** → open `assets/scenes/
 
 1. 安装 **Cocos Creator 3.8.8**（兼容 3.8.x）
 2. 启动 Creator，**重新打开**本目录：`cocos/`（含 `assets/` + `package.json`）
-3. 资源管理器打开 `assets/scenes/main.scene`
+3. 资源管理器打开 `assets/scenes/main.scene`，层级为 `Scene → Canvas → Camera / BoardRoot / UIRoot / GameController`
 4. 控制台不应再出现 `[Scene] Missing class`，也不应提示 `GameController` 上脚本 missing / invalid
-5. 点击编辑器 **▶ 预览 / Play（浏览器）**，应看到开局封面 UI（Play）
-6. 封面点 **Play** → 点试管 A 再点试管 B 倒水
+5. 点击编辑器 **▶ 预览 / Play（浏览器）**，应看到 **SortSplash 封面 + ▶ Play**（不是空白清屏）
+6. 控制台有 `[GameManager] boot(onLoad|start) SUCCESS`；封面点 **Play** → 点试管 A 再点试管 B 倒水
 
-> `GameController` 场景里只挂 `cc.UITransform` + `GameManager`。`TubeManager` / `UIManager` / `AdBridge` 由 `GameManager.ensureComponents()` 在 `onLoad` 动态 `addComponent`。
+> `GameController` **必须在 Canvas 下**（不要挂成 Scene 的兄弟节点）。场景里只挂 `cc.UITransform`（1×1）+ `GameManager`（压缩 CID，与 `GameManager.ts.meta` 的 UUID 对应）。`TubeManager` / `UIManager` / `AdBridge` 由 `ensureComponents()` 运行时 `addComponent`。
 >
-> 若场景节点不完整，`GameManager.onLoad` 还会自动补齐 `Canvas` / `Camera`（正交 UI）/ `BoardRoot` / `UIRoot`。根节点通过 `ensureHierarchy()` 的返回值（`getChildByName`）绑定，**不要**依赖 `find()`，否则 Creator 浏览器预览里 `uiRoot` 为空、`buildAll()` 直接返回，画面只剩清屏色。
+> `boot()` 用 `parent` / `getChildByName` 绑定 `UIRoot`，**禁止 `find()`**。`onLoad` 若还查不到 Canvas，**不会**在 GameController 下再建一个套娃 Canvas；`start()` 发现封面缺失会再 `boot('start', true)`。封面是 Sprite/Label 色块，不依赖 Graphics。
+>
+> 无头检查：`node tools/verify-boot.mjs`
 
 设计分辨率 **720×1280** 竖屏。无需 npm，无需外部字体/图集。
 
@@ -45,19 +47,21 @@ Re-open this `cocos/` folder in **Cocos Creator 3.8.8** → open `assets/scenes/
 ```
 cocos/
 ├── assets/
-│   ├── scenes/main.scene     # Canvas + ORTHO Camera + GameController (GameManager only)
+│   ├── scenes/main.scene     # Scene→Canvas→GameController (GameManager CID only)
 │   └── scripts/
-│       ├── GameManager.ts    # 流程、过关、道具
+│       ├── GameManager.ts    # 流程、过关、道具；onLoad + start boot
 │       ├── TubeManager.ts    # 试管绘制与点击
 │       ├── LevelManager.ts   # 48 关生成与倾倒规则
 │       ├── UIManager.ts      # 封面 / HUD / 弹窗 / Toast / 彩带
+│       ├── UiPaint.ts        # Sprite/Label 色块（预览不依赖 Graphics）
 │       ├── AdBridge.ts       # wx.createRewardedVideoAd 桩 + 倒计时回退
 │       ├── WxAdapter.ts      # wx / localStorage
 │       └── Storage.ts        # 最高关 / 免费 Undo
 ├── settings/                 # 720×1280；无自定义 DEFAULT 层
+├── tools/verify-boot.mjs     # 预览启动路径冒烟
 ├── package.json              # Creator 3.8.8
 ├── README.md
-└── WECHAT.md                 # 微信导出清单
+└── WECHAT.md                 # 预览路径 + 微信导出清单
 ```
 
 ---

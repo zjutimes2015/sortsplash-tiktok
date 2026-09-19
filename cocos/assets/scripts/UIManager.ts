@@ -1,28 +1,20 @@
 /**
- * All HUD / overlays built in code (Graphics + Label + Button + Widget).
- * English-first UI matching the HTML prototype.
+ * All HUD / overlays built in code.
+ * Cover uses Sprite/Label color blocks (not Graphics) so Creator browser
+ * preview shows Play even when Graphics meshes do not flush.
  */
 import {
-    _decorator, Component, Node, UITransform, Graphics, Label, Color,
-    Button, Widget, BlockInputEvents, UIOpacity, tween, Tween, Vec3, Layers,
+    _decorator, Component, Node, Label, Color,
+    Button, Widget, BlockInputEvents, UIOpacity, tween, Tween, Vec3,
 } from 'cc';
 import { TOTAL_LEVELS } from './LevelManager';
 import type { GameManager } from './GameManager';
+import {
+    markUi, ensureUt, makeLabel, makeColorNode,
+    makeButton, makeOverlay,
+} from './UiPaint';
 
 const { ccclass } = _decorator;
-
-/** Creator 3.8: prefer system font so Labels render without a bundled TTF. */
-function applySystemFont(lab: Label) {
-    const anyLab = lab as Label & {
-        useSystemFont?: boolean;
-        fontFamily?: string;
-        cacheMode?: number;
-    };
-    if ('useSystemFont' in anyLab) anyLab.useSystemFont = true;
-    if ('fontFamily' in anyLab) anyLab.fontFamily = anyLab.fontFamily || 'Arial';
-    const modes = (Label as typeof Label & { CacheMode?: { NONE: number } }).CacheMode;
-    if (modes && 'cacheMode' in anyLab) anyLab.cacheMode = modes.NONE;
-}
 
 @ccclass('UIManager')
 export class UIManager extends Component {
@@ -60,6 +52,15 @@ export class UIManager extends Component {
 
     setUIRoot(root: Node) {
         this.uiRoot = root;
+        if (root) markUi(root);
+    }
+
+    hasCover(): boolean {
+        return !!(this._cover && this._cover.isValid !== false && this._cover.parent);
+    }
+
+    isCoverVisible(): boolean {
+        return this.hasCover() && this._cover!.active !== false;
     }
 
     buildAll() {
@@ -67,6 +68,32 @@ export class UIManager extends Component {
             console.error('[UIManager] buildAll skipped: uiRoot is null');
             return;
         }
+        if (this.hasCover()) {
+            console.log('[UIManager] buildAll: cover already present');
+            this.showCover();
+            return;
+        }
+        this.uiRoot.removeAllChildren();
+        this._hud = null;
+        this._toolbar = null;
+        this._footer = null;
+        this._hintBar = null;
+        this._cover = null;
+        this._win = null;
+        this._ad = null;
+        this._levels = null;
+        this._toast = null;
+        this._confetti = null;
+        this._levelLabel = null;
+        this._movesLabel = null;
+        this._undoLabel = null;
+        this._winMsg = null;
+        this._adTitle = null;
+        this._adCount = null;
+        this._toastLabel = null;
+        this._btnAddTube = null;
+        this._btnUndo = null;
+        this._levelGrid = null;
         this._buildBackground();
         this._buildHUD();
         this._buildToolbar();
@@ -79,18 +106,21 @@ export class UIManager extends Component {
         this._buildToast();
         this._buildConfetti();
         this.setGameplayVisible(false);
+        if (this.hasCover()) {
+            console.log('[UIManager] buildAll SUCCESS — Play cover on', this.uiRoot.name);
+        } else {
+            console.error('[UIManager] buildAll FAILED — cover node missing after build');
+        }
     }
 
-    // ─── Soft pastel background ───
+    // ─── Soft pastel background (Sprite/Label fills, no Graphics) ───
     private _buildBackground() {
         if (!this.uiRoot) return;
         const canvas = this.uiRoot.parent;
         let bg = canvas?.getChildByName('BgRoot');
         if (!bg && canvas) {
             bg = new Node('BgRoot');
-            bg.layer = Layers.Enum.UI_2D;
-            const ut = bg.addComponent(UITransform);
-            ut.setContentSize(this.designW, this.designH);
+            ensureUt(bg, this.designW, this.designH);
             const w = bg.addComponent(Widget);
             w.isAlignTop = w.isAlignBottom = w.isAlignLeft = w.isAlignRight = true;
             w.top = w.bottom = w.left = w.right = 0;
@@ -106,19 +136,7 @@ export class UIManager extends Component {
         ];
         for (let i = 0; i < layers.length; i++) {
             const L = layers[i];
-            const n = new Node(`Grad_${i}`);
-            n.layer = Layers.Enum.UI_2D;
-            n.addComponent(UITransform).setContentSize(this.designW + 40, L.h);
-            n.setPosition(0, L.y, 0);
-            const g = n.addComponent(Graphics);
-            g.fillColor = L.color;
-            g.rect(-(this.designW + 40) / 2, -L.h / 2, this.designW + 40, L.h);
-            g.fill();
-            g.fillColor = new Color(L.color.r, L.color.g, L.color.b, 80);
-            g.circle(-220 + i * 70, 80, 140 + i * 16);
-            g.fill();
-            g.circle(240 - i * 50, -60, 110 + i * 12);
-            g.fill();
+            const n = makeColorNode(`Grad_${i}`, L.color, this.designW + 40, L.h, 0, L.y);
             bg.addChild(n);
         }
     }
@@ -127,14 +145,12 @@ export class UIManager extends Component {
     private _buildHUD() {
         if (!this.uiRoot) return;
         const hud = new Node('HUD');
-        hud.layer = Layers.Enum.UI_2D;
-        hud.addComponent(UITransform).setContentSize(this.designW - 32, 72);
+        ensureUt(hud, this.designW - 32, 72);
         hud.setPosition(0, this.designH / 2 - 56, 0);
+        this.uiRoot.addChild(hud);
 
-        const brand = this._makeLabel('Brand', 'SortSplash', 28, new Color(255, 107, 181, 255), -200, 10, 280);
-        hud.addChild(brand.node);
-        const tag = this._makeLabel('Tag', 'Sort colors. One more pour.', 14, new Color(122, 111, 138, 255), -200, -16, 280);
-        hud.addChild(tag.node);
+        hud.addChild(makeLabel('Brand', 'SortSplash', 28, new Color(255, 107, 181, 255), -200, 10, 280).node);
+        hud.addChild(makeLabel('Tag', 'Sort colors. One more pour.', 14, new Color(122, 111, 138, 255), -200, -16, 280).node);
 
         const lv = this._makePill('LvPill', 'Lv 1', 200, 8);
         this._levelLabel = lv.label;
@@ -144,37 +160,26 @@ export class UIManager extends Component {
         this._movesLabel = mv.label;
         hud.addChild(mv.node);
 
-        this.uiRoot.addChild(hud);
         this._hud = hud;
     }
 
     private _makePill(name: string, text: string, x: number, y: number) {
         const n = new Node(name);
-        n.layer = Layers.Enum.UI_2D;
-        n.addComponent(UITransform).setContentSize(110, 36);
+        ensureUt(n, 110, 36);
         n.setPosition(x, y, 0);
-        const g = n.addComponent(Graphics);
-        g.fillColor = new Color(255, 255, 255, 230);
-        g.roundRect(-55, -18, 110, 36, 18);
-        g.fill();
-        const lab = n.addComponent(Label);
-        lab.string = text;
-        lab.fontSize = 16;
-        lab.lineHeight = 36;
-        lab.horizontalAlign = Label.HorizontalAlign.CENTER;
-        lab.verticalAlign = Label.VerticalAlign.CENTER;
-        lab.color = new Color(42, 32, 64, 255);
-        applySystemFont(lab);
-        return { node: n, label: lab };
+        n.addChild(makeColorNode('PillBg', new Color(255, 255, 255, 230), 110, 36));
+        const lab = makeLabel('PillLab', text, 16, new Color(42, 32, 64, 255), 0, 0, 110);
+        n.addChild(lab.node);
+        return { node: n, label: lab.label };
     }
 
     // ─── Toolbar ───
     private _buildToolbar() {
         if (!this.uiRoot) return;
         const bar = new Node('Toolbar');
-        bar.layer = Layers.Enum.UI_2D;
-        bar.addComponent(UITransform).setContentSize(this.designW - 24, 110);
+        ensureUt(bar, this.designW - 24, 110);
         bar.setPosition(0, this.designH / 2 - 150, 0);
+        this.uiRoot.addChild(bar);
 
         const specs: { name: string; text: string; x: number; y: number; ad: boolean; fn: () => void }[] = [
             { name: 'BtnUndo', text: '↩ Undo', x: -230, y: 24, ad: false, fn: () => this._game?.onUndo() },
@@ -186,22 +191,22 @@ export class UIManager extends Component {
         for (const s of specs) {
             const bg = s.ad ? new Color(255, 179, 71, 255) : new Color(255, 255, 255, 230);
             const tc = s.ad ? new Color(74, 48, 0, 255) : new Color(42, 32, 64, 255);
-            const btn = this._makeButton(s.name, s.text, 150, 44, bg, s.x, s.y, s.fn, tc);
+            const btn = makeButton(s.name, s.text, 150, 44, bg, s.x, s.y, s.fn, tc);
             bar.addChild(btn);
             if (s.name === 'BtnUndo') {
                 this._btnUndo = btn;
-                this._undoLabel = btn.getComponent(Label);
+                const labN = btn.getChildByName('BtnLab');
+                this._undoLabel = labN ? labN.getComponent(Label) : btn.getComponent(Label);
             }
             if (s.name === 'BtnTube') this._btnAddTube = btn;
         }
 
-        this.uiRoot.addChild(bar);
         this._toolbar = bar;
     }
 
     private _buildHintBar() {
         if (!this.uiRoot) return;
-        const n = this._makeLabel('HintBar', '', 16, new Color(122, 111, 138, 255), 0, this.designH / 2 - 220, 680);
+        const n = makeLabel('HintBar', '', 16, new Color(122, 111, 138, 255), 0, this.designH / 2 - 220, 680);
         this.uiRoot.addChild(n.node);
         this._hintBar = n.label;
     }
@@ -209,51 +214,38 @@ export class UIManager extends Component {
     private _buildFooter() {
         if (!this.uiRoot) return;
         const foot = new Node('Footer');
-        foot.layer = Layers.Enum.UI_2D;
-        foot.addComponent(UITransform).setContentSize(this.designW - 40, 56);
+        ensureUt(foot, this.designW - 40, 56);
         foot.setPosition(0, -this.designH / 2 + 48, 0);
-        const share = this._makeButton('BtnShare', '📤 Share', 160, 48, new Color(255, 255, 255, 230), -100, 0, () => {
-            this._game?.onShare();
-        }, new Color(42, 32, 64, 255));
-        const levels = this._makeButton('BtnLevels', '📚 Levels', 160, 48, new Color(255, 255, 255, 230), 100, 0, () => {
-            this._game?.onOpenLevels();
-        }, new Color(42, 32, 64, 255));
-        foot.addChild(share);
-        foot.addChild(levels);
         this.uiRoot.addChild(foot);
+        foot.addChild(makeButton('BtnShare', '📤 Share', 160, 48, new Color(255, 255, 255, 230), -100, 0, () => {
+            this._game?.onShare();
+        }, new Color(42, 32, 64, 255)));
+        foot.addChild(makeButton('BtnLevels', '📚 Levels', 160, 48, new Color(255, 255, 255, 230), 100, 0, () => {
+            this._game?.onOpenLevels();
+        }, new Color(42, 32, 64, 255)));
         this._footer = foot;
     }
 
-    // ─── Start cover ───
+    // ─── Start cover (Sprite/Label only — Graphics is a preview no-op) ───
     private _buildCover() {
         if (!this.uiRoot) return;
         const cover = new Node('Cover');
-        cover.layer = Layers.Enum.UI_2D;
-        cover.addComponent(UITransform).setContentSize(this.designW, this.designH);
+        ensureUt(cover, this.designW, this.designH);
         cover.addComponent(BlockInputEvents);
-        const g = cover.addComponent(Graphics);
-        g.fillColor = new Color(255, 245, 251, 255);
-        g.rect(-this.designW / 2, -this.designH / 2, this.designW, this.designH);
-        g.fill();
-        g.fillColor = new Color(232, 244, 255, 180);
-        g.circle(-80, 200, 220);
-        g.fill();
-        g.fillColor = new Color(240, 255, 232, 160);
-        g.circle(140, -80, 180);
-        g.fill();
+        this.uiRoot.addChild(cover);
 
-        const emoji = this._makeLabel('Emoji', '🧪✨', 48, Color.WHITE, 0, 220, 200);
-        cover.addChild(emoji.node);
-        const logo = this._makeLabel('Logo', 'SortSplash', 44, new Color(255, 107, 181, 255), 0, 150, 500);
-        cover.addChild(logo.node);
-        const tag = this._makeLabel('Tagline', 'Sort colors. One more pour.', 20, new Color(122, 111, 138, 255), 0, 100, 500);
-        cover.addChild(tag.node);
+        cover.addChild(makeColorNode('CoverBg', new Color(255, 245, 251, 255), this.designW, this.designH));
+        cover.addChild(makeColorNode('BlobA', new Color(232, 244, 255, 180), 360, 360, -80, 200));
+        cover.addChild(makeColorNode('BlobB', new Color(240, 255, 232, 160), 300, 300, 140, -80));
 
-        // mini tubes
+        cover.addChild(makeLabel('Emoji', '🧪✨', 48, Color.WHITE, 0, 220, 200).node);
+        cover.addChild(makeLabel('Logo', 'SortSplash', 44, new Color(255, 107, 181, 255), 0, 150, 500).node);
+        cover.addChild(makeLabel('Tagline', 'Sort colors. One more pour.', 20, new Color(122, 111, 138, 255), 0, 100, 500).node);
+
         const demo = new Node('DemoTubes');
-        demo.layer = Layers.Enum.UI_2D;
-        demo.addComponent(UITransform).setContentSize(200, 110);
+        ensureUt(demo, 200, 110);
         demo.setPosition(0, 10, 0);
+        cover.addChild(demo);
         const demoColors = [
             [new Color(255, 107, 157, 255), new Color(124, 156, 255, 255), new Color(255, 107, 157, 255), new Color(62, 207, 142, 255)],
             [new Color(124, 156, 255, 255), new Color(62, 207, 142, 255), new Color(255, 179, 71, 255), new Color(124, 156, 255, 255)],
@@ -261,56 +253,44 @@ export class UIManager extends Component {
         ];
         for (let t = 0; t < 3; t++) {
             const tube = new Node('Mini' + t);
-            tube.layer = Layers.Enum.UI_2D;
-            tube.addComponent(UITransform).setContentSize(40, 100);
+            ensureUt(tube, 40, 100);
             tube.setPosition(-54 + t * 54, 0, 0);
-            const tg = tube.addComponent(Graphics);
-            tg.fillColor = new Color(255, 255, 255, 140);
-            tg.roundRect(-20, -50, 40, 100, 12);
-            tg.fill();
-            tg.strokeColor = new Color(90, 70, 120, 60);
-            tg.lineWidth = 2;
-            tg.roundRect(-20, -50, 40, 100, 12);
-            tg.stroke();
-            const layers = demoColors[t];
-            const lh = 25;
-            for (let L = 0; L < layers.length; L++) {
-                tg.fillColor = layers[L];
-                tg.rect(-17, -47 + L * lh, 34, lh);
-                tg.fill();
-            }
             demo.addChild(tube);
+            tube.addChild(makeColorNode('Glass', new Color(255, 255, 255, 200), 40, 100));
+            const layers = demoColors[t];
+            const lh = 22;
+            for (let L = 0; L < layers.length; L++) {
+                tube.addChild(makeColorNode('L' + L, layers[L], 34, lh, 0, -36 + L * lh));
+            }
         }
-        cover.addChild(demo);
 
-        const play = this._makeButton('BtnPlay', '▶  Play', 220, 56, new Color(255, 107, 181, 255), 0, -140, () => {
+        const play = makeButton('BtnPlay', '▶  Play', 220, 56, new Color(255, 107, 181, 255), 0, -140, () => {
             this._game?.onStartPressed();
         });
         cover.addChild(play);
-        const tip = this._makeLabel('Tip', 'Tap a tube, then another to pour 💧', 16, new Color(122, 111, 138, 255), 0, -210, 560);
-        cover.addChild(tip.node);
+        cover.addChild(makeLabel('Tip', 'Tap a tube, then another to pour 💧', 16, new Color(122, 111, 138, 255), 0, -210, 560).node);
 
-        this.uiRoot.addChild(cover);
         this._cover = cover;
+        console.log('[UIManager] Cover built (Sprite/Label) with BtnPlay');
     }
 
     // ─── Win overlay ───
     private _buildWin() {
         if (!this.uiRoot) return;
-        const ov = this._makeOverlay('WinOverlay');
-        const panel = this._makePanel('WinPanel', 340, 320);
+        const ov = makeOverlay('WinOverlay', this.designW, this.designH, new Color(40, 20, 60, 120));
+        const panel = this._makePanel('WinPanel', 340, 320, Color.WHITE);
         ov.addChild(panel);
-        panel.addChild(this._makeLabel('WinEmoji', '🎉✨', 40, Color.WHITE, 0, 110, 120).node);
-        panel.addChild(this._makeLabel('WinTitle', 'Level Cleared!', 28, new Color(42, 32, 64, 255), 0, 60, 300).node);
-        const msg = this._makeLabel('WinMsg', 'Nice pouring!', 16, new Color(122, 111, 138, 255), 0, 22, 300);
+        panel.addChild(makeLabel('WinEmoji', '🎉✨', 40, Color.WHITE, 0, 110, 120).node);
+        panel.addChild(makeLabel('WinTitle', 'Level Cleared!', 28, new Color(42, 32, 64, 255), 0, 60, 300).node);
+        const msg = makeLabel('WinMsg', 'Nice pouring!', 16, new Color(122, 111, 138, 255), 0, 22, 300);
         panel.addChild(msg.node);
         this._winMsg = msg.label;
-        panel.addChild(this._makeButton('BtnNext', 'Next Level →', 280, 48, new Color(255, 107, 181, 255), 0, -40, () => {
+        panel.addChild(makeButton('BtnNext', 'Next Level →', 280, 48, new Color(255, 107, 181, 255), 0, -40, () => {
             this._game?.onNextLevel();
         }));
-        panel.addChild(this._makeButton('BtnReplay', 'Replay', 280, 44, new Color(255, 255, 255, 255), 0, -100, () => {
+        panel.addChild(makeButton('BtnReplay', 'Replay', 280, 44, new Color(255, 255, 255, 255), 0, -100, () => {
             this._game?.onReplay();
-        }, new Color(42, 32, 64, 255), new Color(200, 190, 210, 255)));
+        }, new Color(42, 32, 64, 255)));
         this.uiRoot.addChild(ov);
         this._win = ov;
         ov.active = false;
@@ -319,17 +299,17 @@ export class UIManager extends Component {
     // ─── Ad overlay ───
     private _buildAd() {
         if (!this.uiRoot) return;
-        const ov = this._makeOverlay('AdOverlay');
+        const ov = makeOverlay('AdOverlay', this.designW, this.designH, new Color(40, 20, 60, 120));
         const panel = this._makePanel('AdPanel', 320, 280, new Color(42, 32, 64, 255));
         ov.addChild(panel);
-        panel.addChild(this._makeLabel('AdEmoji', '📺', 40, Color.WHITE, 0, 90, 80).node);
-        const title = this._makeLabel('AdTitle', 'Ad playing…', 24, Color.WHITE, 0, 40, 280);
+        panel.addChild(makeLabel('AdEmoji', '📺', 40, Color.WHITE, 0, 90, 80).node);
+        const title = makeLabel('AdTitle', 'Ad playing…', 24, Color.WHITE, 0, 40, 280);
         panel.addChild(title.node);
         this._adTitle = title.label;
-        const cd = this._makeLabel('AdCount', '3', 48, new Color(255, 179, 71, 255), 0, -10, 120);
+        const cd = makeLabel('AdCount', '3', 48, new Color(255, 179, 71, 255), 0, -10, 120);
         panel.addChild(cd.node);
         this._adCount = cd.label;
-        panel.addChild(this._makeLabel('AdSub', 'Rewarded video stub\n// TODO: wx.createRewardedVideoAd', 14, new Color(203, 184, 232, 255), 0, -80, 280).node);
+        panel.addChild(makeLabel('AdSub', 'Rewarded video stub\n// TODO: wx.createRewardedVideoAd', 14, new Color(203, 184, 232, 255), 0, -80, 280).node);
         this.uiRoot.addChild(ov);
         this._ad = ov;
         ov.active = false;
@@ -362,22 +342,21 @@ export class UIManager extends Component {
     // ─── Level select ───
     private _buildLevels() {
         if (!this.uiRoot) return;
-        const ov = this._makeOverlay('LevelsOverlay');
-        const panel = this._makePanel('LevelsPanel', 360, 620);
+        const ov = makeOverlay('LevelsOverlay', this.designW, this.designH, new Color(40, 20, 60, 120));
+        const panel = this._makePanel('LevelsPanel', 360, 620, Color.WHITE);
         ov.addChild(panel);
-        panel.addChild(this._makeLabel('LvTitle', 'Levels', 28, new Color(42, 32, 64, 255), 0, 270, 200).node);
-        panel.addChild(this._makeLabel('LvSub', 'Tap to jump (unlocked only)', 14, new Color(122, 111, 138, 255), 0, 240, 320).node);
+        panel.addChild(makeLabel('LvTitle', 'Levels', 28, new Color(42, 32, 64, 255), 0, 270, 200).node);
+        panel.addChild(makeLabel('LvSub', 'Tap to jump (unlocked only)', 14, new Color(122, 111, 138, 255), 0, 240, 320).node);
 
         const grid = new Node('LevelGrid');
-        grid.layer = Layers.Enum.UI_2D;
-        grid.addComponent(UITransform).setContentSize(320, 460);
+        ensureUt(grid, 320, 460);
         grid.setPosition(0, -10, 0);
         panel.addChild(grid);
         this._levelGrid = grid;
 
-        panel.addChild(this._makeButton('BtnCloseLv', 'Close', 280, 44, new Color(255, 255, 255, 255), 0, -270, () => {
+        panel.addChild(makeButton('BtnCloseLv', 'Close', 280, 44, new Color(255, 255, 255, 255), 0, -270, () => {
             this.hideLevels();
-        }, new Color(42, 32, 64, 255), new Color(200, 190, 210, 255)));
+        }, new Color(42, 32, 64, 255)));
 
         this.uiRoot.addChild(ov);
         this._levels = ov;
@@ -397,23 +376,17 @@ export class UIManager extends Component {
             const row = Math.floor((i - 1) / cols);
             const unlocked = i <= highest;
             const n = new Node('Lv' + i);
-            n.layer = Layers.Enum.UI_2D;
-            n.addComponent(UITransform).setContentSize(cell, cell);
+            ensureUt(n, cell, cell);
             n.setPosition(startX + col * (cell + gap), startY - row * (cell + gap), 0);
-            const g = n.addComponent(Graphics);
-            if (!unlocked) g.fillColor = new Color(230, 226, 236, 255);
-            else if (i < highest) g.fillColor = new Color(62, 207, 142, 255);
-            else g.fillColor = new Color(255, 107, 181, 255);
-            g.roundRect(-cell / 2, -cell / 2, cell, cell, 10);
-            g.fill();
-            const lab = n.addComponent(Label);
-            lab.string = unlocked ? String(i) : '🔒';
-            lab.fontSize = unlocked ? 16 : 14;
-            lab.lineHeight = cell;
-            lab.horizontalAlign = Label.HorizontalAlign.CENTER;
-            lab.verticalAlign = Label.VerticalAlign.CENTER;
-            lab.color = unlocked ? Color.WHITE : new Color(122, 111, 138, 255);
-            applySystemFont(lab);
+            this._levelGrid.addChild(n);
+            let fill: Color;
+            if (!unlocked) fill = new Color(230, 226, 236, 255);
+            else if (i < highest) fill = new Color(62, 207, 142, 255);
+            else fill = new Color(255, 107, 181, 255);
+            n.addChild(makeColorNode('LvBg', fill, cell, cell));
+            const lab = makeLabel('LvLab', unlocked ? String(i) : '🔒', unlocked ? 16 : 14,
+                unlocked ? Color.WHITE : new Color(122, 111, 138, 255), 0, 0, cell);
+            n.addChild(lab.node);
             if (unlocked) {
                 const lv = i;
                 const btn = n.addComponent(Button);
@@ -424,7 +397,6 @@ export class UIManager extends Component {
                     this._game?.loadLevel(lv);
                 }, this);
             }
-            this._levelGrid.addChild(n);
         }
         void current;
         this._levels.active = true;
@@ -439,19 +411,15 @@ export class UIManager extends Component {
     private _buildToast() {
         if (!this.uiRoot) return;
         const t = new Node('Toast');
-        t.layer = Layers.Enum.UI_2D;
-        t.addComponent(UITransform).setContentSize(420, 44);
+        ensureUt(t, 420, 44);
         t.setPosition(0, -this.designH / 2 + 120, 0);
-        const g = t.addComponent(Graphics);
-        g.fillColor = new Color(42, 32, 64, 235);
-        g.roundRect(-210, -22, 420, 44, 12);
-        g.fill();
+        this.uiRoot.addChild(t);
+        t.addChild(makeColorNode('ToastBg', new Color(42, 32, 64, 235), 420, 44));
         const op = t.addComponent(UIOpacity);
         op.opacity = 0;
-        const lab = this._makeLabel('ToastLab', '', 16, Color.WHITE, 0, 0, 400);
+        const lab = makeLabel('ToastLab', '', 16, Color.WHITE, 0, 0, 400);
         t.addChild(lab.node);
         this._toastLabel = lab.label;
-        this.uiRoot.addChild(t);
         this._toast = t;
     }
 
@@ -468,8 +436,7 @@ export class UIManager extends Component {
     private _buildConfetti() {
         if (!this.uiRoot) return;
         const n = new Node('Confetti');
-        n.layer = Layers.Enum.UI_2D;
-        n.addComponent(UITransform).setContentSize(this.designW, this.designH);
+        ensureUt(n, this.designW, this.designH);
         this.uiRoot.addChild(n);
         this._confetti = n;
     }
@@ -483,17 +450,10 @@ export class UIManager extends Component {
             new Color(167, 139, 250, 255), Color.WHITE,
         ];
         for (let i = 0; i < 36; i++) {
-            const p = new Node('C' + i);
-            p.layer = Layers.Enum.UI_2D;
             const pw = 6 + Math.random() * 6;
             const ph = 8 + Math.random() * 10;
-            p.addComponent(UITransform).setContentSize(pw, ph);
             const x = (Math.random() - 0.5) * this.designW;
-            p.setPosition(x, this.designH / 2 + 20, 0);
-            const g = p.addComponent(Graphics);
-            g.fillColor = palette[i % palette.length];
-            g.roundRect(-pw / 2, -ph / 2, pw, ph, 2);
-            g.fill();
+            const p = makeColorNode('C' + i, palette[i % palette.length], pw, ph, x, this.designH / 2 + 20);
             this._confetti.addChild(p);
             const dur = 1.4 + Math.random() * 1.4;
             tween(p)
@@ -506,7 +466,6 @@ export class UIManager extends Component {
         }, 3.2);
     }
 
-    // ─── Visibility / HUD updates ───
     showCover() {
         if (this._cover) {
             this._cover.active = true;
@@ -565,79 +524,10 @@ export class UIManager extends Component {
         op.opacity = enabled ? 255 : 120;
     }
 
-    // ─── helpers ───
-    private _makeOverlay(name: string): Node {
-        const ov = new Node(name);
-        ov.layer = Layers.Enum.UI_2D;
-        ov.addComponent(UITransform).setContentSize(this.designW, this.designH);
-        ov.addComponent(BlockInputEvents);
-        const g = ov.addComponent(Graphics);
-        g.fillColor = new Color(40, 20, 60, 120);
-        g.rect(-this.designW / 2, -this.designH / 2, this.designW, this.designH);
-        g.fill();
-        return ov;
-    }
-
-    private _makePanel(name: string, w: number, h: number, fill?: Color): Node {
+    private _makePanel(name: string, w: number, h: number, fill: Color): Node {
         const panel = new Node(name);
-        panel.layer = Layers.Enum.UI_2D;
-        panel.addComponent(UITransform).setContentSize(w, h);
-        const g = panel.addComponent(Graphics);
-        g.fillColor = fill || Color.WHITE;
-        g.roundRect(-w / 2, -h / 2, w, h, 24);
-        g.fill();
+        ensureUt(panel, w, h);
+        panel.addChild(makeColorNode('PanelBg', fill, w, h));
         return panel;
-    }
-
-    private _makeLabel(name: string, text: string, size: number, color: Color, x: number, y: number, width = 400) {
-        const n = new Node(name);
-        n.layer = Layers.Enum.UI_2D;
-        n.addComponent(UITransform).setContentSize(width, size + 14);
-        n.setPosition(x, y, 0);
-        const lab = n.addComponent(Label);
-        lab.string = text;
-        lab.fontSize = size;
-        lab.lineHeight = size + 8;
-        lab.horizontalAlign = Label.HorizontalAlign.CENTER;
-        lab.verticalAlign = Label.VerticalAlign.CENTER;
-        lab.color = color;
-        lab.overflow = Label.Overflow.SHRINK;
-        applySystemFont(lab);
-        return { node: n, label: lab };
-    }
-
-    private _makeButton(
-        name: string, text: string, w: number, h: number,
-        bgColor: Color, x: number, y: number, onClick: () => void,
-        textColor?: Color, borderColor?: Color,
-    ): Node {
-        const n = new Node(name);
-        n.layer = Layers.Enum.UI_2D;
-        n.addComponent(UITransform).setContentSize(w, h);
-        n.setPosition(x, y, 0);
-        const g = n.addComponent(Graphics);
-        g.fillColor = bgColor;
-        g.roundRect(-w / 2, -h / 2, w, h, 14);
-        g.fill();
-        if (borderColor) {
-            g.strokeColor = borderColor;
-            g.lineWidth = 2;
-            g.roundRect(-w / 2, -h / 2, w, h, 14);
-            g.stroke();
-        }
-        const lab = n.addComponent(Label);
-        lab.string = text;
-        lab.fontSize = Math.min(20, Math.floor(h * 0.42));
-        lab.lineHeight = h;
-        lab.horizontalAlign = Label.HorizontalAlign.CENTER;
-        lab.verticalAlign = Label.VerticalAlign.CENTER;
-        lab.color = textColor || Color.WHITE;
-        lab.overflow = Label.Overflow.SHRINK;
-        applySystemFont(lab);
-        const btn = n.addComponent(Button);
-        btn.transition = Button.Transition.SCALE;
-        btn.zoomScale = 0.94;
-        n.on(Button.EventType.CLICK, onClick, this);
-        return n;
     }
 }

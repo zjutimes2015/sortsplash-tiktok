@@ -6,6 +6,7 @@ declare module 'cc' {
     export const _decorator: {
         ccclass: (name?: string) => ClassDecorator;
         property: (...args: any[]) => PropertyDecorator;
+        executionOrder: (n: number) => ClassDecorator;
     };
 
     export class Vec3 {
@@ -74,6 +75,23 @@ declare module 'cc' {
         static Overflow: { NONE: number; CLAMP: number; SHRINK: number; RESIZE_HEIGHT: number };
         static CacheMode: { NONE: number; BITMAP: number; CHAR: number };
     }
+    export class Sprite extends Component {
+        spriteFrame: SpriteFrame | null;
+        color: Color;
+        sizeMode: number;
+        type: number;
+        static SizeMode: { CUSTOM: number; TRIMMED: number; RAW: number };
+        static Type: { SIMPLE: number; SLICED: number; TILED: number; FILLED: number };
+    }
+    export class SpriteFrame {
+        texture: Texture2D | null;
+    }
+    export class Texture2D {
+        image: unknown;
+        reset(info: { width: number; height: number; format: number }): void;
+        uploadData(data: Uint8Array): void;
+        static PixelFormat: { RGBA8888: number };
+    }
     export class Button extends Component {
         transition: number;
         zoomScale: number;
@@ -100,6 +118,7 @@ declare module 'cc' {
         position: Vec3;
         scene: Node | null;
         angle: number;
+        isValid: boolean;
         constructor(name?: string);
         addChild(n: Node): void;
         insertChild(n: Node, idx: number): void;

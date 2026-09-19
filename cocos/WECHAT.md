@@ -2,14 +2,26 @@
 
 Cocos Creator **3.8.8** → 平台 **微信小游戏**（`wechatgame`）。根目录 `index.html` 只是玩法原型，**不能**当小游戏包上传。
 
-## 预览必须先可玩
+## 预览必须先可玩（浏览器 ▶）
 
 1. 用 Creator 3.8.8 **打开 `cocos/`**（含 `assets/` + `package.json`）
 2. 打开 `assets/scenes/main.scene`
-3. 点编辑器 **▶ 预览（浏览器）**
-4. 应看到 **SortSplash 封面 + Play 按钮**（不是只有清屏色 / draw calls ≈ 2）
+3. 层级应为：`Scene → Canvas → Camera / BoardRoot / UIRoot / GameController`
+   - `GameController` 在 **Canvas 下**（不是 Scene 的兄弟节点），只挂 `cc.UITransform` + `GameManager`（压缩 CID `087c0aZ3vRDYr9EvCSEIBd3`）
+4. 点编辑器 **▶ 预览（浏览器）**
+5. 控制台应出现 `[GameManager] boot(...) SUCCESS`（`onLoad` 或 `start()` 补建）
+6. 画面应是 **SortSplash 封面 + ▶ Play 按钮**，不是只有清屏色 / draw calls ≈ 2
+7. 点 **Play** → 点试管倒水
 
-无头冒烟（不启动 Creator）：在 `cocos/` 下执行 `node tools/verify-boot.mjs`。它会检查 `onLoad` 用 `ensureHierarchy()` 返回值绑定 `uiRoot` / `boardRoot`，而不是 `find()`，因此不会在 `uiRoot == null` 时提前跳过 `buildAll()`。
+封面用 **Sprite（1×1 白贴图）或 Label「█」色块 + 系统字体 Label**，不依赖 Graphics。若 `onLoad` 时 Scene 子节点还没挂齐，`start()` 会再跑一遍 `boot('start', true)`。
+
+无头冒烟（不启动 Creator）：在 `cocos/` 下执行：
+
+```bash
+node tools/verify-boot.mjs
+```
+
+它会检查：GameController 父节点是 Canvas；场景 CID = `compressUuid(GameManager.ts.meta)`；`onLoad`/`start` 不用 `find()`；封面有 `BtnPlay`。
 
 ## 构建发布 → 微信小游戏
 
