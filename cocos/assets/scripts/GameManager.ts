@@ -46,7 +46,8 @@ export class GameManager extends Component {
     private freeUndos = 3;
     private bonusTubeUsed = false;
     private pouring = false;
-    private save: SaveData = Storage.load();
+    /** Defaults only — Storage.load() runs inside boot() so a wx/storage throw cannot kill the constructor. */
+    private save: SaveData = Storage.defaults();
     private hintTarget = -1;
 
     designW = 720;
@@ -83,10 +84,23 @@ export class GameManager extends Component {
         const parentName = this.node.parent ? this.node.parent.name : '(null)';
         const sceneName = this.node.scene ? this.node.scene.name : '(no scene)';
         console.log(
-            `[GameManager] boot(${phase}) node=${this.node.name} parent=${parentName} scene=${sceneName} allowCreate=${allowCreateCanvas}`,
+            `[GameManager] boot(${phase}) node=${this.node.name} parent=${parentName} scene=${sceneName} allowCreate=${allowCreateCanvas} wx=${WxAdapter.isWeChat()}`,
         );
 
-        view.setDesignResolutionSize(this.designW, this.designH, ResolutionPolicy.SHOW_ALL);
+        try {
+            this.save = Storage.load();
+        } catch (err) {
+            console.warn('[GameManager] Storage.load failed — defaults', err);
+            this.save = Storage.defaults();
+        }
+
+        try {
+            if (view && typeof view.setDesignResolutionSize === 'function') {
+                view.setDesignResolutionSize(this.designW, this.designH, ResolutionPolicy.SHOW_ALL);
+            }
+        } catch (err) {
+            console.warn('[GameManager] setDesignResolutionSize failed', err);
+        }
 
         const hier = this.ensureHierarchy(allowCreateCanvas);
         if (!hier) {

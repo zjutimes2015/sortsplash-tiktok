@@ -163,6 +163,37 @@ assert(/main\.scene/.test(wechat), 'WECHAT.md start scene main');
 assert(/GameController/.test(wechat) && /Canvas/.test(wechat), 'WECHAT.md documents GameController under Canvas');
 assert(/verify-boot/.test(wechat), 'WECHAT.md documents boot smoke test');
 assert(/▶|Play/.test(wechat), 'WECHAT.md preview path mentions Play cover');
+assert(/compileType/.test(wechat) && /urlCheck/.test(wechat), 'WECHAT.md documents compileType + urlCheck');
+assert(/SortSplash-WeChat/.test(wechat) || /重新导入/.test(wechat), 'WECHAT.md has re-import / SortSplash-WeChat path');
+assert(/physics-ammo|物理/.test(wechat), 'WECHAT.md notes physics trim for simulator');
+assert(/first-screen|首屏/.test(wechat), 'WECHAT.md notes first-screen / splash');
+
+const wxAdapter = read('assets/scripts/WxAdapter.ts');
+const storageSrc = read('assets/scripts/Storage.ts');
+const adSrc = read('assets/scripts/AdBridge.ts');
+assert(!/\btypeof\s+localStorage\b/.test(stripComments(wxAdapter)), 'WxAdapter never uses typeof localStorage');
+assert(!/\btypeof\s+localStorage\b/.test(stripComments(storageSrc)), 'Storage never uses typeof localStorage');
+assert(/hasApi\s*\(/.test(wxAdapter) && /isWeChat\s*\(/.test(wxAdapter), 'WxAdapter.hasApi + isWeChat');
+assert(/installWxLocalStoragePolyfill/.test(wxAdapter), 'WxAdapter installs a wx localStorage polyfill');
+assert(/Storage\.defaults\s*\(/.test(gm), 'GameManager uses Storage.defaults() so constructor does not Storage.load()');
+assert(/this\.save\s*=\s*Storage\.load\s*\(/.test(gm), 'boot() calls Storage.load() after construction');
+assert(/WxAdapter\.hasApi\s*\(\s*'createRewardedVideoAd'/.test(adSrc), 'AdBridge gates rewarded ads with hasApi');
+assert(/asPromise/.test(adSrc), 'AdBridge treats wx show() as optional Promise');
+
+const engine = JSON.parse(read('settings/v2/packages/engine.json'));
+const include = engine.modules.configs.defaultConfig.includeModules;
+assert(Array.isArray(include) && include.includes('ui') && include.includes('2d'), 'engine keeps 2d + ui');
+assert(!include.includes('physics-ammo'), 'engine includeModules drops physics-ammo');
+assert(!include.includes('physics-2d-box2d'), 'engine includeModules drops physics-2d-box2d');
+assert(!include.includes('webview'), 'engine includeModules drops webview');
+assert(!include.includes('video'), 'engine includeModules drops video');
+assert(!include.includes('3d'), 'engine includeModules drops unused 3d');
+
+const tmpl = JSON.parse(read('build-templates/wechatgame/project.config.json'));
+assert(tmpl.compileType === 'game', 'build-templates project.config.json compileType is game');
+assert(tmpl.setting && tmpl.setting.urlCheck === false, 'build-templates urlCheck false for dev');
+assert(builder['splash-setting'] && builder['splash-setting'].totalTime === 0, 'splash totalTime 0');
+assert(builder['splash-setting'].logo && builder['splash-setting'].logo.type === 'none', 'splash logo none');
 
 assert(fs.existsSync(path.join(root, '..', 'index.html')), 'root HTML prototype kept');
 assert(fs.existsSync(path.join(root, 'assets/scripts/UiPaint.ts')), 'UiPaint helper present');

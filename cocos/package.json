@@ -8,6 +8,7 @@
   "description": "SortSplash — Color Sort / Water Sort for WeChat mini games (Cocos Creator 3.8)",
   "scripts": {
     "verify-boot": "node tools/verify-boot.mjs",
+    "verify-wechat": "node tools/verify-wechat-runtime.mjs",
     "verify-levels": "node tools/verify-levels.mjs"
   }
 }

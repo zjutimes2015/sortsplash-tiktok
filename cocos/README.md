@@ -55,10 +55,12 @@ cocos/
 │       ├── UIManager.ts      # 封面 / HUD / 弹窗 / Toast / 彩带
 │       ├── UiPaint.ts        # Sprite/Label 色块（预览不依赖 Graphics）
 │       ├── AdBridge.ts       # wx.createRewardedVideoAd 桩 + 倒计时回退
-│       ├── WxAdapter.ts      # wx / localStorage
+│       ├── WxAdapter.ts      # wx / 安全存储（不碰抛错的 localStorage）
 │       └── Storage.ts        # 最高关 / 免费 Undo
-├── settings/                 # 720×1280；无自定义 DEFAULT 层
+├── build-templates/wechatgame/  # compileType game, urlCheck false
+├── settings/                 # 720×1280；已裁剪 physics/webview/3d
 ├── tools/verify-boot.mjs     # 预览启动路径冒烟
+├── tools/verify-wechat-runtime.mjs  # wx + throwing localStorage
 ├── package.json              # Creator 3.8.8
 ├── README.md
 └── WECHAT.md                 # 预览路径 + 微信导出清单
@@ -79,7 +81,9 @@ cocos/
 
 浏览器预览没有 `wx` 时，激励视频会走 **3 秒 “Ad playing…”** 倒计时桩。
 
-存储：`Storage` 在浏览器用 `localStorage`，微信环境用 `wx.setStorageSync` / `wx.getStorageSync`（`typeof wx !== 'undefined'`）。
+存储：`Storage` 在浏览器用 `localStorage`（经 `WxAdapter.browserStorage` 安全读取），微信环境只用 `wx.setStorageSync` / `wx.getStorageSync`。**有 `wx` 时绝不碰 `window.localStorage`**（该 getter 会抛错，DevTools 黑屏）。缺失的 `wx.*` 不会中断 `boot()`。
+
+微信开发者工具必须导入 **重新构建** 后的 `cocos/build/wechatgame`。若你打开的是 `E:\GROK\SortSplash-WeChat\build\wechatgame`，请整目录覆盖或重新导入，详见 [WECHAT.md](./WECHAT.md)。
 
 ---
 
