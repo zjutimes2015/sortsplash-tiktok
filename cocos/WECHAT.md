@@ -14,10 +14,10 @@ Cocos Creator **3.8.8** → 平台 **微信小游戏**（`wechatgame`）。根�
    - `GameController` 在 **Canvas 下**（不是 Scene 的兄弟节点），只挂 `cc.UITransform` + `GameManager`（压缩 CID `087c0aZ3vRDYr9EvCSEIBd3`）
 4. 点编辑器 **▶ 预览（浏览器）**
 5. 控制台应出现 `[GameManager] boot(...) SUCCESS`（`onLoad` 或 `start()` 补建）
-6. 画面应是 **SortSplash 封面 + ▶ Play 按钮**，不是只有清屏色 / draw calls ≈ 2
+6. 画面应是 **SortSplash 封面 + 超大亮粉 ▶ PLAY 按钮**（不是只有清屏色）
 7. 点 **Play** → 点试管倒水
 
-封面用 **Sprite（1×1 白贴图）或 Label「█」色块 + 系统字体 Label**，不依赖 Graphics。若 `onLoad` 时 Scene 子节点还没挂齐，`start()` 会再跑一遍 `boot('start', true)`。
+封面用 **Graphics 色块 + 烘焙颜色 Sprite（CUSTOM 真实尺寸）+ 系统字体「█」铺满**，Play 至少 **320×88**，Cover/UIRoot/Canvas 四边 Widget 拉满 720×1280。若 `onLoad` 时 Scene 子节点还没挂齐，`start()` 会再跑一遍 `boot('start', true)`。
 
 无头冒烟（不启动 Creator）：在 `cocos/` 下执行：
 
@@ -69,14 +69,14 @@ node tools/verify-wechat-runtime.mjs
 3. 打开 **`game.json`**，确认 `"deviceOrientation": "portrait"`
 4. 详情 → 本地设置：勾选 **不校验合法域名**（与 `urlCheck: false` 同类）
 5. 模拟器基础库用小游戏 **mg lib**（3.17.2 可用）；项目类型是 **小游戏**
-6. 点编译：控制台应有 `[GameManager] boot(...) wx=true SUCCESS`，画面是封面 + Play
+6. 点编译：控制台应有 `[GameManager] boot(...) wx=true SUCCESS` 以及 `[UI] BtnPlay ... contentSize=320x88`，画面是封面 + **巨大亮粉 PLAY**
 7. 真机预览：`wx.setStorageSync('sortsplash_v1', …)` 能记下最高关与 Undo
 
 `build-templates/wechatgame/project.config.json` 会在构建时拷进产物（`compileType: game`，`urlCheck: false`）。若 Creator 又生成了一份，以构建目录里的文件为准，按上面核对。
 
 ## 引擎模块（已裁剪，降低模拟器黑屏）
 
-本项目是 2D UI（Sprite / Label / Button / tween），**不需要**物理、3D、Spine、Video、WebView。
+本项目是 2D UI（Sprite / Label / Graphics / Button / tween），**不需要**物理、3D、Spine、Video、WebView。
 
 `settings/v2/packages/engine.json` 已关闭这些模块（构建后不要再在「功能裁剪」里勾回来）：
 

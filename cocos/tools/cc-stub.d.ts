@@ -29,6 +29,7 @@ declare module 'cc' {
         isAlignTop: boolean; isAlignBottom: boolean; isAlignLeft: boolean; isAlignRight: boolean;
         top: number; bottom: number; left: number; right: number;
         alignMode: number;
+        updateAlignment(): void;
         static AlignMode: { ALWAYS: number; ONCE: number; ON_WINDOW_RESIZE: number };
     }
     export class Canvas extends Component {
@@ -69,6 +70,8 @@ declare module 'cc' {
         useSystemFont: boolean;
         fontFamily: string;
         cacheMode: number;
+        enableWrapText: boolean;
+        font: unknown;
         node: Node;
         static HorizontalAlign: { LEFT: number; CENTER: number; RIGHT: number };
         static VerticalAlign: { TOP: number; CENTER: number; BOTTOM: number };
@@ -80,17 +83,22 @@ declare module 'cc' {
         color: Color;
         sizeMode: number;
         type: number;
+        trim: boolean;
+        packable: boolean;
         static SizeMode: { CUSTOM: number; TRIMMED: number; RAW: number };
         static Type: { SIMPLE: number; SLICED: number; TILED: number; FILLED: number };
     }
     export class SpriteFrame {
         texture: Texture2D | null;
+        packable: boolean;
     }
     export class Texture2D {
         image: unknown;
         reset(info: { width: number; height: number; format: number }): void;
         uploadData(data: Uint8Array): void;
+        setWrapMode(u: number, v: number): void;
         static PixelFormat: { RGBA8888: number };
+        static WrapMode: { CLAMP_TO_EDGE: number; REPEAT: number };
     }
     export class Button extends Component {
         transition: number;
@@ -116,6 +124,7 @@ declare module 'cc' {
         active: boolean;
         parent: Node | null;
         position: Vec3;
+        worldPosition: Vec3;
         scene: Node | null;
         angle: number;
         isValid: boolean;

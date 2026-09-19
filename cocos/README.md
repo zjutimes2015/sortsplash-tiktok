@@ -8,7 +8,7 @@ HTML 原型（仓库根目录 `index.html`）仅作玩法与关卡设计参考�
 
 ## English (short)
 
-Re-open this `cocos/` folder in **Cocos Creator 3.8.8** → open `assets/scenes/main.scene`. Hierarchy: `Scene → Canvas → GameController` (GameManager only). Console should not show `[Scene] Missing class`. ▶ Preview should show the **SortSplash Play cover** (Sprite/Label fills; `start()` rebuilds if `onLoad` raced). Switch build platform to **微信小游戏**, replace `adUnitId` placeholders in `assets/scripts/AdBridge.ts`, then build. The root `index.html` is a design reference only.
+Re-open this `cocos/` folder in **Cocos Creator 3.8.8** → open `assets/scenes/main.scene`. Hierarchy: `Scene → Canvas → GameController` (GameManager only). Console should not show `[Scene] Missing class`. ▶ Preview and WeChat simulator should show a **huge bright-pink PLAY** button (Widget-stretched cover; `start()` rebuilds if `onLoad` raced). Switch build platform to **微信小游戏**, replace `adUnitId` placeholders in `assets/scripts/AdBridge.ts`, then **rebuild and re-import** `build/wechatgame`. The root `index.html` is a design reference only.
 
 ---
 
@@ -23,7 +23,7 @@ Re-open this `cocos/` folder in **Cocos Creator 3.8.8** → open `assets/scenes/
 
 > `GameController` **必须在 Canvas 下**（不要挂成 Scene 的兄弟节点）。场景里只挂 `cc.UITransform`（1×1）+ `GameManager`（压缩 CID，与 `GameManager.ts.meta` 的 UUID 对应）。`TubeManager` / `UIManager` / `AdBridge` 由 `ensureComponents()` 运行时 `addComponent`。
 >
-> `boot()` 用 `parent` / `getChildByName` 绑定 `UIRoot`，**禁止 `find()`**。`onLoad` 若还查不到 Canvas，**不会**在 GameController 下再建一个套娃 Canvas；`start()` 发现封面缺失会再 `boot('start', true)`。封面是 Sprite/Label 色块，不依赖 Graphics。
+> `boot()` 用 `parent` / `getChildByName` 绑定 `UIRoot`，**禁止 `find()`**。`onLoad` 若还查不到 Canvas，**不会**在 GameController 下再建一个套娃 Canvas；`start()` 发现封面缺失会再 `boot('start', true)`。封面是 Graphics + 烘焙色 Sprite + 系统字体「█」铺满，Play 为 320×88 亮粉按钮；Cover/UIRoot/Canvas 四边 Widget 对齐 720×1280。
 >
 > 无头检查：`node tools/verify-boot.mjs`
 
@@ -53,7 +53,7 @@ cocos/
 │       ├── TubeManager.ts    # 试管绘制与点击
 │       ├── LevelManager.ts   # 48 关生成与倾倒规则
 │       ├── UIManager.ts      # 封面 / HUD / 弹窗 / Toast / 彩带
-│       ├── UiPaint.ts        # Sprite/Label 色块（预览不依赖 Graphics）
+│       ├── UiPaint.ts        # Graphics + 烘焙色 Sprite + █ 色块（微信可见）
 │       ├── AdBridge.ts       # wx.createRewardedVideoAd 桩 + 倒计时回退
 │       ├── WxAdapter.ts      # wx / 安全存储（不碰抛错的 localStorage）
 │       └── Storage.ts        # 最高关 / 免费 Undo
